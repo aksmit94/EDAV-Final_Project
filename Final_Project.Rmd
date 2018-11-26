@@ -1,0 +1,108 @@
+---
+title: "EDAV Final Project"
+author: "Ashwin Jayaraman"
+date: "11/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We would be exploring the Inpatient costs for the Medicare Population. The data was downloaded from the CMS Website whose link can be found at this link(https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/Inpatient.html). This data provides information on inpatient discharges for Medicare fee-for-service beneficiaries. 
+
+Hospitals determine what they will charge for items and services provided to patients and these charges are the amount the hospital bills for an item or service. The Total Payment amount includes the MS-DRG amount, bill total per diem, beneficiary primary payer claim payment amount, beneficiary Part A coinsurance amount, beneficiary deductible amount, beneficiary blood deducible amount and DRG outlier amount.
+
+Let us now load the data 
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+data <- read_csv('Medicare_Provider_Charge_Inpatient_DRGALL_FY2016.csv')
+```
+
+Looking at the top few rows of this data 
+
+
+
+```{r}
+head(data)
+```
+
+Here is a description fo the columns of the data 
+
+**DRG Definition:** The code and description identifying the MS-DRG. MS-DRGs are a classification system that groups similar clinical conditions (diagnoses) and the procedures furnished by the hospital during the stay.
+**Provider Id:** The CMS Certification Number (CCN) assigned to the Medicare certified hospital facility. Provider Name: The name of the provider.
+**Provider Street Address:** The provider’s street address.
+**Provider City:** The city where the provider is located.
+**Provider State:** The state where the provider is located.
+**Provider Zip Code:** The provider’s zip code.
+**Provider HRR:** The Hospital Referral Region (HRR) where the provider is located.
+**Total Discharges:** The number of discharges billed by the provider for inpatient hospital services.
+**Average Covered Charges:** The provider's average charge for services covered by Medicare for all discharges in the MS-DRG. These will vary from hospital to hospital because of differences in hospital charge structures.
+**Average Total Payments:** The average total payments to all providers for the MS-DRG including the MS- DRG amount, teaching, disproportionate share, capital, and outlier payments for all cases. Also included in average total payments are co-payment and deductible amounts that the patient is responsible for and any additional payments by third parties for coordination of benefits.
+**Average Medicare Payments:** The average amount that Medicare pays to the provider for Medicare's share of the MS-DRG. Average Medicare payment amounts include the MS-DRG amount, teaching, disproportionate share, capital, and outlier payments for all cases.
+
+Looking at the 2016 data and analysing the variable Hospital Referral Region (HRR) Description. Let us see the relationship of the variables 
+
+We will first see how many unique Hospital Referral Region are present in the data 
+```{r}
+length(unique(data$`Hospital Referral Region (HRR) Description`))
+```
+
+We have 306 Hospital Referral Region. Let us try and see how they depend on the variables. 
+
+```{r}
+data$`Average Medicare Payments` <- gsub('\\$', '', data$`Average Medicare Payments`)
+data$`Average Medicare Payments` <- gsub('\\,', '', data$`Average Medicare Payments`)
+data$`Average Medicare Payments` <- as.numeric(data$`Average Medicare Payments`)
+```
+
+Let us look at the average cost for all the categories
+
+```{r}
+cost_data <- data %>% group_by(`Hospital Referral Region (HRR) Description`) %>% summarize(Avg = mean(`Average Medicare Payments`))
+hospitals <- cost_data$`Hospital Referral Region (HRR) Description` [order (cost_data$Avg, decreasing = TRUE)]
+ggplot(data = subset(cost_data,`Hospital Referral Region (HRR) Description` %in% hospitals[1:20] ) , aes(reorder(`Hospital Referral Region (HRR) Description`,Avg), Avg)) + 
+  geom_bar(stat = "identity") + xlab("Hospitals Referral Regions") + 
+  coord_flip()
+```
+
+
+```{r}
+data$`Average Covered Charges` <- gsub('\\$', '', data$`Average Covered Charges`)
+data$`Average Covered Charges` <- gsub('\\,', '', data$`Average Covered Charges`)
+data$`Average Covered Charges` <- as.numeric(data$`Average Covered Charges`)
+cost_data <- data %>% group_by(`Hospital Referral Region (HRR) Description`) %>% summarize(Avg = mean(`Average Covered Charges`))
+hospitals <- cost_data$`Hospital Referral Region (HRR) Description` [order (cost_data$Avg, decreasing = TRUE)]
+ggplot(data = subset(cost_data,`Hospital Referral Region (HRR) Description` %in% hospitals[1:20] ) , aes(reorder(`Hospital Referral Region (HRR) Description`,Avg), Avg)) + 
+  geom_bar(stat = "identity") + xlab("Hospitals Referral Regions") + 
+  coord_flip()
+```
+
+
+```{r}
+data$`Average Total Payments` <- gsub('\\$', '', data$`Average Total Payments`)
+data$`Average Total Payments` <- gsub('\\,', '', data$`Average Total Payments`)
+data$`Average Total Payments` <- as.numeric(data$`Average Total Payments`) 
+cost_data <- data %>% group_by(`Hospital Referral Region (HRR) Description`) %>% summarize(Avg = mean(`Average Total Payments`))
+hospitals <- cost_data$`Hospital Referral Region (HRR) Description` [order (cost_data$Avg, decreasing = TRUE)]
+ggplot(data = subset(cost_data,`Hospital Referral Region (HRR) Description` %in% hospitals[1:20] ) , aes(reorder(`Hospital Referral Region (HRR) Description`,Avg), Avg)) + 
+  geom_bar(stat = "identity") + xlab("Hospitals Referral Regions") + 
+  coord_flip()
+```
+
+We see that the cost for the San Mateo County in California is the highest in all the three categories. The covered charges are high in general for the california region. This is not the case for the other 2 categories which has other states featuring more often with respect to California. California state still dominates the list coming high in all the 3 categories
+
+This shows that the cost for Medicare in California is really high. 
+
+Let us try and see the avergae number of discharges and see where California places on the list. 
+
+```{r}
+cost_data <- data %>% group_by(`Hospital Referral Region (HRR) Description`) %>% summarize(Avg = mean(`Total Discharges`))
+hospitals <- cost_data$`Hospital Referral Region (HRR) Description` [order (cost_data$Avg, decreasing = TRUE)]
+ggplot(data = subset(cost_data,`Hospital Referral Region (HRR) Description` %in% hospitals[1:20] ) , aes(reorder(`Hospital Referral Region (HRR) Description`,Avg), Avg)) + 
+  geom_bar(stat = "identity") + xlab("Hospitals Referral Regions") + 
+  coord_flip()
+```
+
+
+We see when it comes to discharges, California does not rate highly. This shows that the cost per treatment is really high in California. Further analysis can be performed to group via DRG to see which DRG is driving the main cost for California. 
