@@ -1,0 +1,129 @@
+---
+title: "Data_Questions"
+author: "Ashwin Jayaraman"
+date: "11/30/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+We haev  6 files for each year. Let us load all the files and combine into 1 file. 
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+data_2011 <- read_csv('Medicare_Provider_Charge_Inpatient_DRG100_FY2011.csv')
+data_2012 <- read_csv('Medicare_Provider_Charge_Inpatient_DRG100_FY2012.csv')
+data_2013 <- read_csv('Medicare_Provider_Charge_Inpatient_DRG100_FY2013.csv')
+data_2014 <- read_csv("Medicare_Provider_Charge_Inpatient_DRGALL_FY2014.csv")
+data_2015 <- read_csv("Medicare_Provider_Charge_Inpatient_DRGALL_FY2015.csv")
+data_2016 <- read_csv("Medicare_Provider_Charge_Inpatient_DRGALL_FY2016.csv")
+```
+
+Adding the year column to each of the files 
+
+```{r}
+data_2011$Year <- 2011
+data_2012$Year <- 2012
+data_2013$Year <- 2013
+data_2014$Year <- 2014
+data_2015$Year <- 2015
+data_2016$Year <- 2016
+```
+
+Now merging the data 
+
+
+```{r}
+data <- rbind(data_2011,data_2012,data_2013,data_2014,data_2015,data_2016)
+```
+
+Removing the files loaded from the workspace 
+
+```{r}
+rm(data_2011, data_2012, data_2013, data_2014, data_2015, data_2016)
+```
+
+Let us look at the data 
+
+```{r}
+head(data)
+```
+
+
+Cleaning the amounts in the data 
+
+```{r}
+data$`Average Covered Charges` <- gsub('\\$', '', data$`Average Covered Charges`)
+data$`Average Covered Charges` <- gsub('\\,', '', data$`Average Covered Charges`)
+data$`Average Covered Charges` <- as.numeric(data$`Average Covered Charges`)
+data$`Average Medicare Payments` <- gsub('\\$', '', data$`Average Medicare Payments`)
+data$`Average Medicare Payments` <- gsub('\\,', '', data$`Average Medicare Payments`)
+data$`Average Medicare Payments` <- as.numeric(data$`Average Medicare Payments`)
+data$`Average Total Payments` <- gsub('\\$', '', data$`Average Total Payments`)
+data$`Average Total Payments` <- gsub('\\,', '', data$`Average Total Payments`)
+data$`Average Total Payments` <- as.numeric(data$`Average Total Payments`) 
+```
+
+```{r}
+data$Total_Payments = data$`Average Total Payments` * data$`Total Discharges`
+```
+
+
+Now some of the key questions that we want to ask is how are payments changing from state to state vis DRG. We have information at a zip code level. So our hypothesis is that certain treatments would be expensive in certain states. 
+
+We also want to see whether certain DRG contribute a lot to the cost. Are there 20% of the DRG which contribute to 80% of the cost. We also want to see the frequencies of these events. Are the costs high for a few number of events which we can term rare events. 
+
+Removing the missing entries 
+
+```{r}
+data_na_removed <- na.omit(data)
+```
+
+Let us first identify the percentage of discharges for each of the DRG by Year 
+
+```{r}
+drg_grouped_by_year <-  data_na_removed %>% group_by(`DRG Definition`, `Year`,
+                                                     `Provider State`) %>%
+  summarise(Count_Discharge = sum(`Total Discharges`),Sum_Amount = sum(`Total_Payments`))
+
+drg_grouped_by_year  <- drg_grouped_by_year  %>% group_by(`Year`) %>% mutate(Percent_Discharges = 100 * Count_Discharge/sum(Count_Discharge),
+                                                                             Percent_Cost = 100 * Sum_Amount/sum(Sum_Amount))
+```
+
+We have the yearly data by state. We can combine all 6 years by adding to see the total cost for that particular state 
+
+```{r}
+drg_grouped_by_year$Average_Amount <- drg_grouped_by_year$Sum_Amount/drg_grouped_by_year$Count_Discharge
+```
+
+We also have the average cost by year for each of the states 
+
+Let us now visualize this in the US State Map 
+
+Let us see the Average Cost by the whole state 
+
+```{r}
+total_cost_by_state <- drg_grouped_by_year %>% group_by(`Provider State`) %>% summarise(Total_Discharges = sum(Count_Discharge),
+                                                                                        Total_Cost = sum(Sum_Amount))
+total_cost_by_state$value <- total_cost_by_state$Total_Cost/total_cost_by_state$Total_Discharges
+colnames(total_cost_by_state)[1] <- 'state'
+```
+
+```{r}
+library(choroplethr)
+library(choroplethrMaps)
+library(plyr)
+```
+
+```{r}
+data(state.regions)
+head(state.regions)
+total_cost_by_state$region <- mapvalues(total_cost_by_state$state, from = state.regions$abb, to = state.regions$region)
+```
+
+```{r}
+state_choropleth(total_cost_by_state)
+
+```
+
