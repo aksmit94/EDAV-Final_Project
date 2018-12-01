@@ -152,4 +152,4 @@ state_choropleth(total_cost_by_state,title = "Total Discharges by State",
                  legend = "Total Discharges")
 ```
 
-We can see that despite a hugh number of discharges and total vost in the states of AL, MS, Ok. They actually have a very low average cost. On the other hand we see that 
+We can see that despite a hugh number of discharges and total vost in the states of AL, MS, Ok. They actually have a very low average cost. On the other hand we see that the states of MT, WY, ND have a low total number of discharges but have a higher average cost. This means that the cost for treating the DRG is pretty expensive in those states. 
