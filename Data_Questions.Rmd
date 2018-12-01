@@ -9,6 +9,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(tidyverse)
+```
+
+
 We haev  6 files for each year. Let us load all the files and combine into 1 file. 
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -83,8 +88,7 @@ data_na_removed <- na.omit(data)
 Let us first identify the percentage of discharges for each of the DRG by Year 
 
 ```{r}
-drg_grouped_by_year <-  data_na_removed %>% group_by(`DRG Definition`, `Year`,
-                                                     `Provider State`) %>%
+drg_grouped_by_year <-  data_na_removed %>% group_by(`DRG Definition`, `Year`,`Provider State`) %>%
   summarise(Count_Discharge = sum(`Total Discharges`),Sum_Amount = sum(`Total_Payments`))
 
 drg_grouped_by_year  <- drg_grouped_by_year  %>% group_by(`Year`) %>% mutate(Percent_Discharges = 100 * Count_Discharge/sum(Count_Discharge),
@@ -104,9 +108,10 @@ Let us now visualize this in the US State Map
 Let us see the Average Cost by the whole state 
 
 ```{r}
-total_cost_by_state <- drg_grouped_by_year %>% group_by(`Provider State`) %>% summarise(Total_Discharges = sum(Count_Discharge),
+total_cost_by_state <- drg_grouped_by_year %>% dplyr::group_by(`Provider State`) %>% 
+  dplyr::summarise(Total_Discharges = sum(Count_Discharge),
                                                                                         Total_Cost = sum(Sum_Amount))
-total_cost_by_state$value <- total_cost_by_state$Total_Cost/total_cost_by_state$Total_Discharges
+total_cost_by_state$Average_Cost <- total_cost_by_state$Total_Cost/total_cost_by_state$Total_Discharges
 colnames(total_cost_by_state)[1] <- 'state'
 ```
 
@@ -123,7 +128,28 @@ total_cost_by_state$region <- mapvalues(total_cost_by_state$state, from = state.
 ```
 
 ```{r}
-state_choropleth(total_cost_by_state)
+total_cost_by_state$value <- total_cost_by_state$Average_Cost
+state_choropleth(total_cost_by_state,title = "Average Cost by State",
+                 legend = "Average Cost")
 
 ```
 
+Alaska has a high verage cost but lets compare that with the total number of discharges and the total cost as well
+
+Let us plot
+```{r}
+
+total_cost_by_state$value <- total_cost_by_state$Total_Cost
+state_choropleth(total_cost_by_state,title = "Total Cost by State",
+                 legend = "Total Cost")
+
+```
+
+
+```{r}
+total_cost_by_state$value<- total_cost_by_state$Total_Discharges
+state_choropleth(total_cost_by_state,title = "Total Discharges by State",
+                 legend = "Total Discharges")
+```
+
+We can see that despite a hugh number of discharges and total vost in the states of AL, MS, Ok. They actually have a very low average cost. On the other hand we see that 
