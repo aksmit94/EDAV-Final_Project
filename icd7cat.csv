@@ -1,0 +1,118 @@
+001,008 ,Tuberculosis of respiratory system
+010,019 ,Tuberculosis other forms
+020,029 ,Syphilis and its sequelae
+030,039 ,Gonococcal infection and other venereal diseases
+040,049 ,Infectious diseases commonly arising in intestinal tract
+050,064 ,Other bacterial diseases
+070,074 ,Spirochaetal diseases except syphilis
+080,096 ,Diseases attributable to viruses
+100,108 ,Typhus and other rickettsial diseases
+110,117 ,Malaria
+120,138 ,Other infective and parasitic diseases
+140,148 ,Malignant neoplasm of buccal cavity and pharynx
+150,159 ,Malignant neoplasm of digestive organs and peritoneum
+160,165 ,Malignant neoplasm of respiratory system
+170,181 ,Malignant neoplasm of breast and genito-urinary organs
+190,199 ,Malignant neoplasm of other and unspecified sites
+200,207 ,Neoplasms of lymphatic and haematopoietic tissues
+210,229 ,Benign neoplasm
+230,239 ,Neoplasm of unspecified nature
+240,245 ,Allergic disorders
+250,254 ,Diseases of thyroid gland
+260,260 ,Diabetes mellitus
+270,277 ,Diseases of other endocrine glands
+280,289 ,Avitaminoses and other metabolic diseases
+290,299 ,Diseases of blood and blood-forming organs
+300,309 ,Psychoses
+310,318 ,Psychoneurotic disorders
+320,326 ,Disorders of character behaviour and intelligence
+330,334 ,Vascular lesions affecting central nervous system
+340,345 ,Inflammatory diseases of central nervous system
+350,357 ,Other diseases of central nervous system
+360,369 ,Diseases of nerves and peripheral ganglia
+370,379 ,Inflammatory diseases of eye
+380,389 ,Other diseases and conditions of eye
+390,398 ,Diseases of ear and mastoid process
+400,402 ,Rheumatic fever
+410,416 ,Chronic rheumatic heart disease
+420,422 ,Arteriosclerotic and degenerative heart disease
+430,434 ,Other diseases of heart
+440,443 ,Hypertensive heart disease
+444,447 ,Other hypertensive disease
+450,456 ,Diseases of arteries
+460,468 ,Diseases of veins and other diseases of circulatory system
+470,475 ,Acute upper respiratory infections
+480,483 ,Influenza
+490,493 ,Pneumonia
+500,502 ,Bronchitis
+510,527 ,Other diseases of respiratory system
+530,539 ,Diseases of buccal cavity and oesophagus
+540,545 ,Diseases of stomach and duodenum
+550,553 ,Appendicitis
+560,561 ,Hernia of abdominal cavity
+570,578 ,Other diseases of intestines and peritoneum
+580,587 ,Diseases of liver gallbladder and pancreas
+590,594 ,Nephritis and nephrosis
+600,609 ,Other diseases of urinary system
+610,617 ,Diseases of male genital organs
+620,626 ,Diseases of breast ovary Fallopian tube and parametrium
+630,637 ,Diseases of uterus and other female genital organs
+640,649 ,Complications of pregnancy
+650,652 ,Abortion
+660,660 ,Delivery without mention of complication
+670,678 ,Delivery with specified complication
+680,689 ,Complications of the puerperium
+690,698 ,Infections of skin and subcutaneous tissue
+700,716 ,Other diseases of skin and subcutaneous tissue
+720,727 ,Arthritis and rheumatism except rheumatic fever
+730,738 ,Osteomyelitis and other diseases of bone and joint
+740,749 ,Other diseases of musculoskeletal system
+750,759 ,Congenital malformations
+760,769 ,Birth injuries asphyxia and infections of newborn
+770,776 ,Other diseases peculiar to early infancy
+780,789 ,Symptoms referable to systems or organs
+790,795 ,Senility and ill-defined diseases
+E800,E802 ,Railway accidents
+E810,E825 ,Motor vehicle traffic accidents
+E830,E835 ,Motor vehicle non-traffic accidents
+E840,E845 ,Other road vehicle accidents
+E850,E858 ,Water transport accidents
+E860,E866 ,Aircraft accidents
+E870,E888 ,Accidental poisoning by solid and liquid substances
+E890,E895 ,Accidental poisoning by gases and vapours
+E900,E904 ,Accidental falls
+E910,E936 ,Other accidents
+E940,E946 ,Complications due to non-therapeutic medical and surgical procedures
+E950,E959 ,Therapeutic misadventure and late complications of therapeutic procedures
+E960,E965 ,Late effects of injury and poisoning
+E970,E979 ,Suicide and self-inflicted injury
+E980,E985 ,Homicide and injury purposely inflicted by other persons (not in war)
+E990,E999 ,Injury resulting from operations of war
+N800,N809 ,Fracture of skull spine and trunk
+N810,N819 ,Fracture of upper limb
+N820,N829 ,Fracture of lower limb
+N830,N839 ,Dislocation without fracture
+N840,N848 ,Sprains and strains of joints and adjacent muscles
+N850,N856 ,Head injury (excluding skull fracture)
+N860,N869 ,Internal injury of chest abdomen and pelvis
+N870,N879 ,Laceration and open wound of face neck and trunk
+N880,N888 ,Laceration and open wound of upper limb
+N890,N898 ,Laceration and open wound of lower limb
+N900,N908 ,Laceration and open wounds of multiple location
+N910,N918 ,Superficial injury
+N920,N929 ,Contusion and crushing with intact skin surface
+N930,N936 ,Effects of foreign body entering through orifice
+N940,N949 ,Burns
+N950,N959 ,Injury to nerves and spinal cord without bone injury
+N960,N979 ,Effects of poisons
+N980,N989 ,Effects of weather exposure and related conditions
+N990,N999 ,Other and unspecified injuries and reactions
+Y00,Y09 ,Special conditions and examinations without sickness
+Y10,Y18 ,Admissions for convalescent care plastic treatment and fitting of prosthetic devices
+Y20,Y29 ,Classification of liveborn infants according to type of birth
+Y30,Y39 ,Classification of causes of stillbirth
+Y40,Y49 ,Prophylactic inoculation and vaccination
+Y50,Y59 ,Impairment due to birth injury congenital malformation and musculoskeletal diseases
+Y60,Y69 ,Impairment due to other diseases and accidents
+Y70,Y79 ,Absence or amputation of major and minor members due to diseases congenital malformations and injuries
+Y80,Y88 ,Blindness and deafness following disease or injury
