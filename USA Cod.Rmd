@@ -1,0 +1,60 @@
+---
+title: "COD Data Cleanup"
+author: "Akshat Mittal"
+date: "December 2, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r warning=FALSE, message=FALSE}
+#Libraries
+library(tidyverse)
+library(lubridate)
+```
+
+
+## R Markdown
+
+USA Cod file has mortality data by gender, age and cause from 1959 to 2004.
+
+Reading in the file as a tibble
+```{r}
+cod <- as.tibble(read.csv('../USAcod.csv', header = TRUE))
+```
+
+Check for nulls
+```{r}
+sum(complete.cases(cod)) == dim(cod)[1]
+```
+
+Luckily, none!
+
+Formatting columns
+```{r}
+cod$Age <- as.integer(cod$Age)
+cod$Year <- ymd(cod$Year, truncated = 2L) 
+cod$ICDnumber <- as.integer(cod$ICDnumber)
+cod$ICDcode <-  as.factor(cod$ICDcode)
+cod$Deaths <- as.integer(cod$Deaths)
+```
+
+
+Adding column for age group (0-19: Teens; 20-59: Adult; 60+)
+```{r}
+cod$AgeGroup <- ifelse(cod$Age < 2, "Infant", ifelse(cod$Age < 20, "Teen", ifelse(cod$Age < 60, "Adult", "Old")))
+```
+
+
+##Getting into it
+
+1. timeseries
+
+```{r fig.height=8, fig.width=12}
+cod %>% group_by(AgeGroup, Year) %>% summarize(total = sum(Deaths))%>% ggplot() + geom_line(aes(Year,total,  col=AgeGroup)) + xlab("Year") + ylab("Deaths") + geom_point(aes(Year,total,  col=AgeGroup))
+```
+
+
+
