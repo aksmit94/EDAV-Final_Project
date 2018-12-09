@@ -95,7 +95,9 @@ data_na_removed$Diagnostic_category <- plyr::mapvalues(data_na_removed$`DRG Defi
 
 
 
-Let us first identify the percentage of discharges for each of the Diagnostic Categories by Year 
+Let us first identify the percentage of discharges for each of the Diagnostic Categories by Year. So we will be grouping the data by the Diagnostic Categories, the year and the State and identifying the total discharges and the total amount. 
+
+Mutating allows us to give the percentage for each of the diagnostic categories. 
 
 ```{r}
 drg_grouped_by_year <-  data_na_removed %>% group_by(`Diagnostic_category`, `Year`,`Provider State`) %>%
@@ -138,9 +140,11 @@ library(choroplethrMaps)
 ```
 
 ```{r}
+library(Hmisc)
 data(state.regions)
 head(state.regions)
 total_cost_by_state$region <- plyr::mapvalues(total_cost_by_state$state, from = state.regions$abb, to = state.regions$region)
+data_na_removed$State <- capitalize(plyr::mapvalues(data_na_removed$`Provider State`, from = state.regions$abb, to = state.regions$region))
 ```
 
 ```{r fig.width = 6}
@@ -231,6 +235,50 @@ ggplot(top_drg_count, aes(x = reorder(Diagnostic_category,Discharge) ,y = Discha
 
 
 
+Let us now create the cleaveland dot plot to identify the performance of hospitals over the US. We have the state level data and the diagnostic categories. We can create an interactible component which will allow us to do it in a general variable 
+
+
+```{r}
+theme_dotplot <- theme_bw(12) +
+    theme(axis.text.y = element_text(size = rel(.75)),
+          axis.ticks.y = element_blank(),
+          axis.title.x = element_text(size = rel(.75)),
+          panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_line(size = 0.5),
+          panel.grid.minor.x = element_blank())
+```
+
+```{r}
+
+
+filter_state <- 'California' 
+filter_diagnostic_category <- 'Nervous System'
+state_data <- data_na_removed %>% filter(State == filter_state) %>% filter(Diagnostic_category == filter_diagnostic_category) 
+
+min_num_of_discharges <- 50
+
+provider_information <- state_data %>% group_by(`Provider Name`) %>% filter(sum(`Total Discharges`) > min_num_of_discharges) %>%
+  summarise(Average_Cost = sum(Total_Payments)/sum(`Total Discharges`), Discharges = sum(`Total Discharges`))
+
+number <- 10
+
+costly_providers<-head(provider_information[order(-provider_information$Average_Cost),], number)
+cheapest_providers <- head(provider_information[order(provider_information$Average_Cost),], number)
+
+ggplot(costly_providers, aes(x = Average_Cost, y = fct_reorder(`Provider Name`, Average_Cost))) +
+  geom_point(color = "blue") + xlab("Average Cost") + ylab("") + 
+  scale_x_continuous(labels = function(l) { paste0("$",l/1000, "K")}) +
+  theme_dotplot + 
+  ggtitle("Average Cost of Most expensive Providers")
+
+
+ggplot(cheapest_providers, aes(x = Average_Cost, y = fct_reorder(`Provider Name`, Average_Cost))) +
+  geom_point(color = "blue") + xlab("Average Cost") + ylab("") + 
+  scale_x_continuous(labels = function(l) { paste0("$",l/1000, "K")}) +
+  theme_dotplot + 
+  ggtitle("Average Cost of Least expensive Providers")
+  
+```
 
 
 
