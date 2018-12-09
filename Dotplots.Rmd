@@ -1,0 +1,61 @@
+---
+title: "Dot Plots"
+author: "Ashwin Jayaraman"
+date: "12/9/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Let us load the Data 
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+data <- read_csv('Inpatient_Cost.csv')
+```
+
+```{r}
+theme_dotplot <- theme_bw(12) +
+    theme(axis.text.y = element_text(size = rel(.75)),
+          axis.ticks.y = element_blank(),
+          axis.title.x = element_text(size = rel(.75)),
+          panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_line(size = 0.5),
+          panel.grid.minor.x = element_blank())
+```
+
+
+```{r}
+filter_state <- 'California' 
+filter_diagnostic_category <- 'Nervous System'
+state_data <- data %>% filter(State == filter_state) %>% filter(Diagnostic_category == filter_diagnostic_category) 
+
+min_num_of_discharges <- 50
+
+provider_information <- state_data %>% group_by(`Provider Name`) %>% filter(sum(`Total Discharges`) > min_num_of_discharges) %>%
+  summarise(Average_Cost = sum(Total_Payments)/sum(`Total Discharges`), Discharges = sum(`Total Discharges`))
+
+number <- 10
+
+costly_providers<-head(provider_information[order(-provider_information$Average_Cost),], number)
+cheapest_providers <- head(provider_information[order(provider_information$Average_Cost),], number)
+
+ggplot(costly_providers, aes(x = Average_Cost, y = fct_reorder(`Provider Name`, Average_Cost))) +
+  geom_point(color = "blue") + xlab("Average Cost") + ylab("") + 
+  scale_x_continuous(labels = function(l) { paste0("$",l/1000, "K")}) +
+  theme_dotplot + 
+  ggtitle("Average Cost of Most expensive Providers")
+
+
+ggplot(cheapest_providers, aes(x = Average_Cost, y = fct_reorder(`Provider Name`, Average_Cost))) +
+  geom_point(color = "blue") + xlab("Average Cost") + ylab("") + 
+  scale_x_continuous(labels = function(l) { paste0("$",l/1000, "K")}) +
+  theme_dotplot + 
+  ggtitle("Average Cost of Least expensive Providers")
+```
+

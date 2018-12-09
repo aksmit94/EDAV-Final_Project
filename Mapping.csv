@@ -589,21 +589,21 @@
 895 - ALCOHOL/DRUG ABUSE OR DEPENDENCE W REHABILITATION THERAPY,895,Alcoho­l/Drug Use or Induced Mental Disorders
 896 - ALCOHOL/DRUG ABUSE OR DEPENDENCE W/O REHABILITATION THERAPY W MCC,896,Alcoho­l/Drug Use or Induced Mental Disorders
 897 - ALCOHOL/DRUG ABUSE OR DEPENDENCE W/O REHABILITATION THERAPY W/O MCC,897,Alcoho­l/Drug Use or Induced Mental Disorders
-902 - WOUND DEBRIDEMENTS FOR INJURIES W CC,902," Injuries, Poison & Toxic Effects of Drugs"
-904 - SKIN GRAFTS FOR INJURIES W CC/MCC,904," Injuries, Poison & Toxic Effects of Drugs"
-906 - HAND PROCEDURES FOR INJURIES,906," Injuries, Poison & Toxic Effects of Drugs"
-907 - OTHER O.R. PROCEDURES FOR INJURIES W MCC,907," Injuries, Poison & Toxic Effects of Drugs"
-908 - OTHER O.R. PROCEDURES FOR INJURIES W CC,908," Injuries, Poison & Toxic Effects of Drugs"
-909 - OTHER O.R. PROCEDURES FOR INJURIES W/O CC/MCC,909," Injuries, Poison & Toxic Effects of Drugs"
-914 - TRAUMATIC INJURY W/O MCC,914," Injuries, Poison & Toxic Effects of Drugs"
-915 - ALLERGIC REACTIONS W MCC,915," Injuries, Poison & Toxic Effects of Drugs"
-916 - ALLERGIC REACTIONS W/O MCC,916," Injuries, Poison & Toxic Effects of Drugs"
-917 - POISONING & TOXIC EFFECTS OF DRUGS W MCC,917," Injuries, Poison & Toxic Effects of Drugs"
-918 - POISONING & TOXIC EFFECTS OF DRUGS W/O MCC,918," Injuries, Poison & Toxic Effects of Drugs"
-919 - COMPLICATIONS OF TREATMENT W MCC,919," Injuries, Poison & Toxic Effects of Drugs"
-920 - COMPLICATIONS OF TREATMENT W CC,920," Injuries, Poison & Toxic Effects of Drugs"
-921 - COMPLICATIONS OF TREATMENT W/O CC/MCC,921," Injuries, Poison & Toxic Effects of Drugs"
-"923 - OTHER INJURY, POISONING & TOXIC EFFECT DIAG W/O MCC",923," Injuries, Poison & Toxic Effects of Drugs"
+902 - WOUND DEBRIDEMENTS FOR INJURIES W CC,902,"Injuries, Poison & Toxic Effects of Drugs"
+904 - SKIN GRAFTS FOR INJURIES W CC/MCC,904,"Injuries, Poison & Toxic Effects of Drugs"
+906 - HAND PROCEDURES FOR INJURIES,906,"Injuries, Poison & Toxic Effects of Drugs"
+907 - OTHER O.R. PROCEDURES FOR INJURIES W MCC,907,"Injuries, Poison & Toxic Effects of Drugs"
+908 - OTHER O.R. PROCEDURES FOR INJURIES W CC,908,"Injuries, Poison & Toxic Effects of Drugs"
+909 - OTHER O.R. PROCEDURES FOR INJURIES W/O CC/MCC,909,"Injuries, Poison & Toxic Effects of Drugs"
+914 - TRAUMATIC INJURY W/O MCC,914,"Injuries, Poison & Toxic Effects of Drugs"
+915 - ALLERGIC REACTIONS W MCC,915,"Injuries, Poison & Toxic Effects of Drugs"
+916 - ALLERGIC REACTIONS W/O MCC,916,"Injuries, Poison & Toxic Effects of Drugs"
+917 - POISONING & TOXIC EFFECTS OF DRUGS W MCC,917,"Injuries, Poison & Toxic Effects of Drugs"
+918 - POISONING & TOXIC EFFECTS OF DRUGS W/O MCC,918,"Injuries, Poison & Toxic Effects of Drugs"
+919 - COMPLICATIONS OF TREATMENT W MCC,919,"Injuries, Poison & Toxic Effects of Drugs"
+920 - COMPLICATIONS OF TREATMENT W CC,920,"Injuries, Poison & Toxic Effects of Drugs"
+921 - COMPLICATIONS OF TREATMENT W/O CC/MCC,921,"Injuries, Poison & Toxic Effects of Drugs"
+"923 - OTHER INJURY, POISONING & TOXIC EFFECT DIAG W/O MCC",923,"Injuries, Poison & Toxic Effects of Drugs"
 927 - EXTENSIVE BURNS OR FULL THICKNESS BURNS W MV >96 HRS W SKIN GRAFT,927,Burns
 927 - EXTENSIVE BURNS OR FULL THICKNESS BURNS W MV 96+ HRS W SKIN GRAFT,927,Burns
 928 - FULL THICKNESS BURN W SKIN GRAFT OR INHAL INJ W CC/MCC,928,Burns
