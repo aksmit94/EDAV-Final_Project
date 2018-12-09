@@ -85,10 +85,20 @@ Removing the missing entries
 data_na_removed <- na.omit(data)
 ```
 
-Let us first identify the percentage of discharges for each of the DRG by Year 
+Let us first map the DRG to the relevant Buckets 
+
 
 ```{r}
-drg_grouped_by_year <-  data_na_removed %>% group_by(`DRG Definition`, `Year`,`Provider State`) %>%
+mapping <- read_csv('Mapping.csv')
+data_na_removed$Diagnostic_category <- plyr::mapvalues(data_na_removed$`DRG Definition`, from = mapping$DRG, to = mapping$Name)
+```
+
+
+
+Let us first identify the percentage of discharges for each of the Diagnostic Categories by Year 
+
+```{r}
+drg_grouped_by_year <-  data_na_removed %>% group_by(`Diagnostic_category`, `Year`,`Provider State`) %>%
   summarise(Count_Discharge = sum(`Total Discharges`),Sum_Amount = sum(`Total_Payments`))
 
 drg_grouped_by_year  <- drg_grouped_by_year  %>% group_by(`Year`) %>% mutate(Percent_Discharges = 100 * Count_Discharge/sum(Count_Discharge),
@@ -109,25 +119,31 @@ Let us see the Average Cost by the whole state
 
 ```{r}
 total_cost_by_state <- drg_grouped_by_year %>% dplyr::group_by(`Provider State`) %>% 
-  dplyr::summarise(Total_Discharges = sum(Count_Discharge),
-                                                                                        Total_Cost = sum(Sum_Amount))
+  dplyr::summarise(Total_Discharges = sum(Count_Discharge),Total_Cost = sum(Sum_Amount))
+
 total_cost_by_state$Average_Cost <- total_cost_by_state$Total_Cost/total_cost_by_state$Total_Discharges
 colnames(total_cost_by_state)[1] <- 'state'
 ```
 
+
+```{r}
+drg_grouped_by_year %>% dplyr::group_by(`Provider State`) %>% 
+  dplyr::summarise(Total_Discharges = sum(Count_Discharge),Total_Cost = sum(Sum_Amount))
+```
+
+
 ```{r}
 library(choroplethr)
 library(choroplethrMaps)
-library(plyr)
 ```
 
 ```{r}
 data(state.regions)
 head(state.regions)
-total_cost_by_state$region <- mapvalues(total_cost_by_state$state, from = state.regions$abb, to = state.regions$region)
+total_cost_by_state$region <- plyr::mapvalues(total_cost_by_state$state, from = state.regions$abb, to = state.regions$region)
 ```
 
-```{r}
+```{r fig.width = 6}
 total_cost_by_state$value <- total_cost_by_state$Average_Cost
 state_choropleth(total_cost_by_state,title = "Average Cost by State",
                  legend = "Average Cost")
@@ -153,3 +169,73 @@ state_choropleth(total_cost_by_state,title = "Total Discharges by State",
 ```
 
 We can see that despite a hugh number of discharges and total vost in the states of AL, MS, Ok. They actually have a very low average cost. On the other hand we see that the states of MT, WY, ND have a low total number of discharges but have a higher average cost. This means that the cost for treating the DRG is pretty expensive in those states. 
+
+Lets us see which DRG is contributing a lot to the cost
+
+```{r}
+drg_cost <- drg_grouped_by_year %>% group_by(`Diagnostic_category`) %>% 
+  dplyr::summarise(Average_Cost = sum(Sum_Amount)/sum(Count_Discharge))
+```
+
+
+```{r}
+#drg_cost$DRG_Definition <- gsub('(.*?)- ', '',drg_cost$`DRG Definition`)
+
+dominant_drg <- drg_cost[order(-drg_cost$Average_Cost),]
+
+top<-head(dominant_drg$Diagnostic_category,10)
+
+top_drg_cost <- drg_cost[drg_cost$Diagnostic_category %in% top,]
+
+```
+
+```{r fig.width = 5}
+ggplot(top_drg_cost, aes(x = reorder(Diagnostic_category,Average_Cost) ,y = Average_Cost)) + 
+         geom_col() + scale_y_continuous(labels = function(l) { paste0(l/1000, "K")}) +
+  coord_flip() + ylab('Average Cost') + xlab('DRG') + ggtitle('Top Cost by DRG')
+```
+
+```{r}
+drg_discharge <- drg_grouped_by_year %>% group_by(`Diagnostic_category`) %>% 
+  dplyr::summarise(Discharge = max(Count_Discharge))
+
+#drg_discharge$DRG_Definition <- gsub('(.*?)- ', '',drg_discharge$`DRG Definition`)
+
+dominant_drg <- drg_discharge[order(-drg_discharge$Discharge),]
+
+top<-head(dominant_drg$Diagnostic_category,10)
+
+top_drg_count <- drg_discharge[drg_discharge$Diagnostic_category %in% top,]
+
+```
+
+
+```{r}
+drg_common <- drg_grouped_by_year %>% group_by(`Diagnostic_category`,`Provider State`) %>% 
+  dplyr::summarise(Discharge = sum(Count_Discharge))
+
+
+most_drg <- drg_common %>%  group_by(`Provider State`) %>%
+             filter(Discharge == max(Discharge)) %>%
+             arrange(`Provider State`,`Diagnostic_category` )
+
+
+```
+
+
+```{r fig.width = 5}
+ggplot(top_drg_count, aes(x = reorder(Diagnostic_category,Discharge) ,y = Discharge)) + 
+         geom_col() + scale_y_continuous(labels = function(l) { paste0(l/1000000, "M")}) +
+  coord_flip() + ylab('Count') + xlab('DRG') + ggtitle('Number of Discharges by DRG')
+```
+
+
+
+
+
+
+
+```{r eval=FALSE, include=FALSE}
+write.csv(data_na_removed, "Inpatient_Cost.csv")
+```
+
