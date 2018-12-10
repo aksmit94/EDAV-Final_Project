@@ -32,7 +32,7 @@ theme_dotplot <- theme_bw(12) +
 
 ```{r}
 filter_state <- 'California' 
-filter_diagnostic_category <- 'Nervous System'
+filter_diagnostic_category <- 'Heart'
 state_data <- data %>% filter(State == filter_state) %>% filter(Diagnostic_category == filter_diagnostic_category) 
 
 min_num_of_discharges <- 50
@@ -58,4 +58,67 @@ ggplot(cheapest_providers, aes(x = Average_Cost, y = fct_reorder(`Provider Name`
   theme_dotplot + 
   ggtitle("Average Cost of Least expensive Providers")
 ```
+
+
+
+Now we will look at which states have the highest disparities for a particular diagnostic category  
+
+We will group by a particular Diagnostic Category and look at the disparities. 
+
+```{r fig.height=30}
+
+library(grDevices)
+
+diagnostic_category <- unique(data$Diagnostic_category)
+
+number <- 10
+
+for(i in diagnostic_category){
+  filtered_data <- data %>% filter(sum(`Total Discharges`) > min_num_of_discharges) %>%
+    filter(Diagnostic_category == i) %>% group_by(State, `Provider Name`) %>% 
+    summarise(Average_Cost = sum(Total_Payments)/sum(`Total Discharges`)) 
+  
+  median_for_state <- filtered_data %>% group_by(State) %>% summarise(median = median(Average_Cost))
+  
+  costly_states<-head(median_for_state[order(-median_for_state$median),], number)
+  
+  #filtered_data <- filtered_data[filtered_data$State %in% costly_states$State,]
+  
+  temp_plot <- ggplot(filtered_data, aes(x = reorder(State, Average_Cost, median),
+                        y = Average_Cost)) + 
+    geom_boxplot() + coord_flip() + 
+    theme_grey(20)
+  ggsave(temp_plot, file = paste("Plots/",gsub("/" ," ", i), "_Overall.jpeg"), width = 14, height = 10)
+}
+
+
+
+# filtered_data <- data %>% group_by(State, `Provider Name`) %>% filter(sum(`Total Discharges`) > min_num_of_discharges) %>%
+#   summarise(Average_Cost = sum(Total_Payments)/sum(`Total Discharges`)) %>% filter(medi)
+
+
+ 
+# ggplot(filtered_data, aes(x = reorder(State, Average_Cost, median),
+#                         y = Average_Cost)) + 
+#   geom_boxplot() +
+#   coord_flip() + theme_grey(20)
+```
+
+
+We can also see the trend of the Diagnosis Categories over the years 
+
+```{r fig.width= 8}
+
+
+
+filtered_data <- data  %>% group_by(Diagnostic_category, Year) %>% 
+  summarise(Average_Cost = sum(Total_Payments)/sum(`Total Discharges`)) %>% mutate(count = n()) %>% filter(count > 3)
+
+ggplot(filtered_data, aes(x=Year, y=Average_Cost, color =Diagnostic_category )) + geom_line() +
+  xlab('Year') + ylab('Average Cost') + ggtitle('Average Cost Trend by Diagnostic Category')
+ 
+
+```
+
+
 
