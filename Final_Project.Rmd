@@ -152,3 +152,7 @@ Let us look at the data
 head(data)
 ```
 
+```{r}
+
+```
+
