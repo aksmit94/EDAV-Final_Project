@@ -296,13 +296,66 @@ This graph does shed light on the our question from the previous graph as to whe
 
 The most basic derivation from this graph is that it shows which DRGs medicare treats most. It makes sense for example that Pregnancy and Childbirth are rarely paid for by medicare because in general only people over 65 are eligible for medicare. Note that the 6,983 cases here likely come from the small group of people who received social security disability insurance checks for over 24 months and become eligible for medicare.
 
-From the above 2 graphs we wanted to dig deeper into the variation within the states 
+From the above 2 graphs we wanted to dig deeper into the variation within the states. We believed that there were some hospitals which were charging more for the same diagnostic category within a partcular state. 
+
+We first filtered out the hospitals which did not have 50 discharges in the 5 years. We looked at the state of California which had a higher average cost and looked at the Diagnostic Category of Heart. 
+
+```{r echo=FALSE}
+filter_state <- 'California' 
+filter_diagnostic_category <- 'Heart'
+state_data <- data %>% filter(State == filter_state) %>% filter(Diagnostic_category == filter_diagnostic_category) 
+
+min_num_of_discharges <- 50
+
+provider_information <- state_data %>% group_by(`Provider Name`) %>% filter(sum(`Total Discharges`) > min_num_of_discharges) %>%
+  summarise(Average_Cost = sum(Total_Payments)/sum(`Total Discharges`), Discharges = sum(`Total Discharges`))
+
+number <- 10
+
+costly_providers<-head(provider_information[order(-provider_information$Average_Cost),], number)
+cheapest_providers <- head(provider_information[order(provider_information$Average_Cost),], number)
+```
+
+```{r echo=FALSE}
+theme_dotplot <- theme_bw(12) +
+    theme(axis.text.y = element_text(size = rel(.75)),
+          axis.ticks.y = element_blank(),
+          axis.title.x = element_text(size = rel(.75)),
+          panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_line(size = 0.5),
+          panel.grid.minor.x = element_blank())
+```
+
+We then plotted the Hospitals which have the highest average cost 
+
+```{r fig.height=10, fig.width=10}
+ggplot(costly_providers, aes(x = Average_Cost, y = fct_reorder(`Provider Name`, Average_Cost))) +
+  geom_point(color = "blue") + xlab("Average Cost") + ylab("") + 
+  scale_x_continuous(labels = function(l) { paste0("$",l/1000, "K")}) +
+  theme_dotplot + 
+  ggtitle("Average Cost of Most expensive Providers")
+```
+
+We then plotted the Hospitals which have the lowest average cost 
+
+```{r fig.height=10, fig.width=10}
+ggplot(cheapest_providers, aes(x = Average_Cost, y = fct_reorder(`Provider Name`, Average_Cost))) +
+  geom_point(color = "blue") + xlab("Average Cost") + ylab("") + 
+  scale_x_continuous(labels = function(l) { paste0("$",l/1000, "K")}) +
+  theme_dotplot + 
+  ggtitle("Average Cost of Least expensive Providers")
+```
+
+There was a huge variation among the hospitals within the state of California. The highest hospitals were charging upwards of 400K while the lowest hospitals were charging less than 100K. Seeing such a high variation motivated us to create the 2nd interactive component. 
+
+This would allow the user to play with the data and identify the most expensive and least expensive hospitals by state for a diagnostic category. 
+
 
 # Executive summary
 
 There were three main findings that we derived from our analysis:
 
-```{r fig.height=10, fig.width=10, warning=FALSE, messages=FALSE}
+```{r echo = FALSE, fig.height=10, fig.width=10, warning=FALSE, messages=FALSE}
 
 data$`DRG Definition` <- gsub('(.*?)- ', '',data$`DRG Definition`)
 
@@ -354,7 +407,7 @@ plotly_build(p)
 
 2. California and New York have a high average cost and high number of discharges. They contribute to the majority of the cost. Reducing their costs by 5% will reduce the overall spend by 
 
-```{r fig.height=10, fig.width=10, warning=FALSE, messages=FALSE}
+```{r echo = FALSE, fig.height=10, fig.width=10, warning=FALSE, messages=FALSE}
 
 
 filtered_data <- data %>% filter(sum(`Total Discharges`) > 50) %>% group_by(`Provider State`, `Provider Name`) %>% 
