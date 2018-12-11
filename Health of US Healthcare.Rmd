@@ -884,7 +884,7 @@ Mental and behavioral disorders, and diseases of the nervous system and sense or
 
 ## DRGApp
 
-[LINK](aksmit94.shinyapps.io/DRGApp/)
+[LINK](https://aksmit94.shinyapps.io/DRGApp/)
 
 The aim of the interactive app is to make it easy to visualize, in several dimensions (year, number of discharges, type of disease etc), the scenario of healthcare costs in the US. Kindly note that this app is best viewed in Chrome (version 70+) at 100% zoom. It consists of two components:
 
@@ -908,7 +908,7 @@ The aim of the interactive app is to make it easy to visualize, in several dimen
 
 ## MortalityLightApp
 
-[LINK](aksmit94.shinyapps.io/MortalityLightApp/)
+[LINK](https://aksmit94.shinyapps.io/MortalityLightApp/)
 
 Given a state (any of the 50 US states plus DC) and sex (either “male” or “female”, or both sexes combined), This app shows three heatmaps. Each heatmap is dimensioned on year and age, and shows one of the following:
 1. The first heatmap shows the chosen state’s and sex’s individual mortality improvement. Green indicates that the mortality for that age group has decreased (improved) from the prior year, reflected as a percentage of prior period’s mortality.
@@ -924,7 +924,7 @@ It is interesting to compare coastal states to southern and midwestern states. I
 
 ## MortalityHeavyApp
 
-[LINK](aksmit94.shinyapps.io/MortalityHeavyApp/)
+[LINK](https://aksmit94.shinyapps.io/MortalityHeavyApp/)
 
 
 This app is identical to the Light App, but includes an additional graphic showing the mortality trend over time for a particular set of age groups, and cause of death. This helps show the underlying driver of mortality improvement or deterioration in the above heatmaps. For example, it is easy to see that the spike in HIV-AIDS deaths among middle-aged men occurred at the same time and to the same sex and age group as the heatmaps show a negative mortality event. This can be seen by setting the State to “NY”, Sex to “m”, Age Groups to “35-39”, and Cause of Death to “Certain Infectious Diseases - HIV-AIDS”.
