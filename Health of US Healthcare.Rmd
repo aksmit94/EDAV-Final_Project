@@ -709,7 +709,7 @@ ggplot(us_5x1_t %>% filter(COD.cat=="All", Sex=="b", Age %in% c("55-59", "60-64"
 
 There were three main findings that we derived from our analysis:
 
-```{r echo = FALSE, fig.height=10, fig.width=10, warning=FALSE, messages=FALSE}
+```{r echo = FALSE, fig.width=10, warning=FALSE, messages=FALSE}
 
 data$`DRG Definition` <- gsub('(.*?)- ', '',data$`DRG Definition`)
 
@@ -761,7 +761,7 @@ plotly_build(p)
 
 2. California and New York have a high average cost and high number of discharges. They contribute to the majority of the cost. Reducing their costs by 5% will reduce the overall spend by 
 
-```{r echo = FALSE, fig.height=10, fig.width=10, warning=FALSE, messages=FALSE}
+```{r echo = FALSE, fig.width=10, warning=FALSE, messages=FALSE}
 
 
 filtered_data <- data %>% filter(sum(`Total Discharges`) > 50) %>% group_by(`Provider State`, `Provider Name`) %>% 
