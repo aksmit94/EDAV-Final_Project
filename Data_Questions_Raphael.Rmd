@@ -161,9 +161,20 @@ tidy_form_of_data <- drg_grouped_by_totalAvg %>% gather(key = Category, value = 
 
 ggplot(tidy_form_of_data, aes(x = Percentage,
                                 y = fct_reorder2(Diagnostic_category, fct_reorder(Category,Percentage), -Percentage), color = Category)) +
-   geom_point() + ylab("") + theme_dotplot + 
-   ggtitle("Number of fatalities per million traffic miles")
+   geom_point() + ylab("DRGs") + theme_dotplot + 
+   ggtitle("DRGs by Percent Avg Cost & Percent of Discharges") + scale_color_manual(name="Category", 
+                        labels = c("Percent Cost",
+                                   "Percent Discharges"), 
+                        values = c("Percent_Cost"="Blue", 
+                                   "Percent_Discharges"="red"))
 ```
+The motivation behind building this graph is that previous graphs do not show the relationship between the diagnoses related group's percent discharges and percent cost. We thought that the percentage cost should correlate with the percentage discharged. 
+
+If we look at the DRG Musculoskeletal System & Connective Tissue we see that it accounts for approximately 12.59% of discharges while it also accounts for over 17% of cost. This discrepency could be due to a few different factors. One possibility is that each treatment is expensive compared to other treatments. This high cost could also be due to an array of other factors.
+
+Ultimately this graph leaves us wondering why medicare is paying more or less for some treatments when we would expect them to pay more in line with the percent of discharges for the category?
+
+This is a difficult question because there are many possible reasons but also becuase each DRG warrants a good inspection as to with treatments within the category are the most expensive on average and which hospitals are charging the most and least for that category.
 
 
 ```{r}
