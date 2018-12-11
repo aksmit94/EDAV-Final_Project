@@ -18,6 +18,7 @@ library(choroplethr)
 library(choroplethrMaps)
 library(plotly)
 library(scales)
+library(lubridate)
 ```
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
@@ -101,12 +102,16 @@ The medicare dataset was collected from the website of Centers for Medicare and 
 
 
 
-The Mortality dataset can be obtained from [here](https://cod.mortality.org/COD/USA/CODinputs/USAcod.csv). The link requires a credential to access the dataset. We had to apply to get the access (Username: "hmdcod" and Password: "magali").
+The Mortality dataset was initially can be obtained from [here](https://cod.mortality.org/COD/USA/CODinputs/USAcod.csv). The link requires a credential to access the dataset. We had to apply to get the access (Username: "hmdcod" and Password: "magali").
+
+While working on the dataset, it was found that the data was lacking in some key areas. We emailed the creator of the dataset and she emailed us 2 new datasets that she will were recently published on the website, one that includes the aggregate data for the US and other which includes mortality rates by states:
+
+1. [Mortality by State, split by Age, Year, and Sex](https://usa.mortality.org/uploads/lifetables/lifetables.zip on 12/7/2018.)
+
+2. [Mortality for US aggregate, split by Cause of Death, 5-year age groups, Year, and Sex](http://www.nber.org/data/vital-statistics-mortality-data-mulitiple-cause-of-death.html)
 
 
-While working on the dataset, it was found that the data was lacking in some key areas. We emailed the creator of the dataset and she emailed us 2 new datasets that she will soon publish on the website, one that includes the aggregate data for the US and other which includes mortality rates by states. 
-
-<!-- Asaf's Part Goes Here -->
+Tabular data was received from Magali Barbieri on 12/7/2018, originally sourced from the National Bureau of Economic Research website .
 
 ## General Description of Data
 
@@ -128,9 +133,224 @@ The Medicare dataset contains the following columns:
 12. Average Medicare Payments: The average amount that Medicare pays to the provider for Medicare's share of the MS-DRG. Average Medicare payment amounts include the MS-DRG amount, disproportionate share, capital, and outlier payments for all cases. Medicare payments do not include beneficiary co-payments and deductible amounts nor any additional payments from third parties for coordination of benefits.
 
 
-The Mortality dataset contains the following columns
 
-<!-- Asaf's Part Goes Here -->
+The Mortality dataset:
+
+
+State mortality data is available as a separate file for each state, bucketed by 1 year, 5 years, and 10 years, for both age and year.
+Each state's mortality is presented as an actuarial life table. This analysis is only focused on the qx's (probability of death within that age group).
+The mortality data is segmented by sex as either "male", "female", or "both".
+Population data is not available on the state level, so it is not possible to aggregate state-level mortality data to infer US aggregate mortality.
+Cause of death data is not provided on the state level.
+
+
+US aggregate mortality data is available in 5yr age buckets, and 1yr "year" buckets, for males, females, and both.
+Death counts are provided along with the mortality rates, allowing for the population to be calculated (pop = deaths / rate)
+Cause of death is also provided. The coding was provided by Magali Barbieri along with an index. This was based on the NBER coding based on ICD codes. There are 92 cause-of-death codes, which is significantly consolidated from the NBER codes, and for each code a Disease and Grouping is provided in the index. There is also an "All" code for the total for all causes of death. The dataset also includes columns showing the mortality for that cause of death as a fraction of the total mortality.
+Due to the availability of population data (inferred from the rates and death counts) and disease groupings, it is possible to also infer mortality rates for entire disease groupings. There are a total of 20 disease groupings, which is possibly few enough to be able to visualize simultaneously.
+No state data is provided in the dataset.
+
+<!-- Mortality dataset prep -->
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+# Creating a vector of filenames to read in
+states <- c("AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DC", "DE", "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY", "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY")
+filenames <- vector("character", 0)
+for(s in states) {
+  for(g in c("m", "f", "b")) {
+    filenames[length(filenames)+1] <- paste("Data/lifetables/", s, "/", s, "_", g, "ltper_5x5.csv", sep="")
+  }
+}
+
+# Reading the files into a list
+files <- list()
+for(n in filenames){
+  files[[length(files)+1]] <- read.csv(n)
+}
+
+# Unlisting -> Converting the data in the list into a single dataframe.
+# Removing unnecessary fields from the actuarial life table
+# Removing ages groups above 100. Mortality at these ages is typically unreliable, and also there is no equivalent age group in the aggregate US dataset.
+# Refactoring the remaining age groups so they are sequential.
+combinedData <- plyr::ldply(files, data.frame)
+combinedQ <- combinedData %>% select(PopName, Sex, Year, Age, qx) %>% as.tibble()
+combinedQ <- combinedQ %>% filter(Age != "100-104", Age != "105-109", Age != "110+")
+combinedQ$Age <- factor(combinedQ$Age, c("0", "1-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80-84", "85-89", "90-94", "95-99"))
+
+# Converting the qx data to be an average one-year qx within the age group. Currently it is presented as the probability of dying within that 5-year age group.
+# This transformation will help the data be comparable to the US aggregate mortality data
+combinedQ$qx[combinedQ$Age != "0" & combinedQ$Age != "1-4"] <- 1 - (1 - combinedQ$qx[combinedQ$Age != "0" & combinedQ$Age != "1-4"])^(1/5)
+combinedQ$qx[combinedQ$Age == "1-4"] <- 1 - (1 - combinedQ$qx[combinedQ$Age == "1-4"])^(1/4)
+```
+
+<!-- Converting the mortality dataset into a mortality *improvement* dataset -->
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+# The mortality rates are converted into mortality improvement rates by creating a table of qx's for every year, and then taking the difference from year to year for a particular state/ sex/ age group.
+# The difference is calculated as (qx_t / qx_t-1) - 1
+# The first year is omitted from the mortality improvement table, since that year has nothing to be compared against.
+combinedImprov <- combinedQ %>% spread(Year, qx)
+combinedImprov.orig <- combinedImprov
+combinedImprov[, 5:ncol(combinedImprov)] <- 
+  combinedImprov[, 5:ncol(combinedImprov)] / combinedImprov[, 4:(ncol(combinedImprov)-1)] - 1
+combinedImprov <- combinedImprov[,-4]
+combinedImprov %>% gather(Year, Improvement, -PopName, -Sex, -Age) -> combinedImprov
+combinedImprov$Year <- as.factor(combinedImprov$Year)
+```
+
+<!-- Reading in the 5x1 data (ie 5yr "age" buckets, 1yr "year" buckets). -->
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+us <- read.csv("Data/HMD-COD-USA/HMD-COD_5x1.csv") %>% as.tibble()
+```
+
+
+<!-- Using the index to create a table of disease codes, groupings, and full categorization ([Grouping] - [Disease]) to go along with the numeric coding in the dataset. -->
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+# Storing a separate vector of diseases for each grouping
+# Then, for each vector, creating a vector that repeats the name of the grouping x times (one for each disease in that grouping). This will be used to create a proper table of "code" - "disease" - "grouping" - "full categorization"
+infections <- c("Tuberculosis", "Syphilis", "Infectious Gastro-enteritis", "Dysentery", "Meningococcal infection", "Septicemia", "Viral hepatitis", "HIV-AIDS", "Other infectious diseases")
+infections_g <- rep("Certain infectious diseases", length(infections))
+neoplasms <- c("Lip/oral cavity/pharynx", "Esophagus", "Stomach", "Colon", "Rectum", "Liver, gallbladder and bile ducts", "Pancreas", "Larynx", "Trachea, bronchus, and lung", "Skin", "Breast", "Cervix uteri", "Other uterus", "Ovary", "Prostate", "Kidney", "Bladder", "Hodgkin lymphoma", "Non-Hodgkin lymphoma", "Myeloma", "Leukemia", "Other malignant neoplasms", "Other neoplasms")
+neoplasms_g <- rep("Malignant neoplasms", length(neoplasms))
+blood <- c("Diseases of the blood and blood-forming organs")
+blood_g <- rep("Blood", length(blood))
+endocrine <- c("Diabetes Mellitus", "Overweight, obesity, and other hyperalimentation", "Other endocrine, nutritional and metabolic diseases")
+endocrine_g <- rep("Endocrine, nutritional and metabolic diseases", length(endocrine))
+mental <- c("Alcohol abuse", "Drug dependence, toxicomania", "Other mental and behavioural disorders")
+mental_g <- rep("Mental and behavioural disorders", length(mental))
+nervous <- c("Meningitis", "Parkinson's disease", "Alzheimer's disease", "Multiple sclerosis", "Other diseases of the nervous system and the sense organs")
+nervous_g <- rep("Diseases of the nervous system and the sense organs", length(nervous))
+heart <- c("Chronic rheumatic heart diseases", "Acute rheumatic heart diseases", "Arteriosclerotic/ischaemic and degenerative", "Hypertensive heart disease", "Pulmonary heart disease and diseases of pulmonary circulation", "Other forms of heart disease")
+heart_g <- rep("Heart disease", length(heart))
+cerebrovascular <- c("Cerebrovascular disease")
+cerebrovascular_g <- rep("Cerebrovascular", length(cerebrovascular))
+circulatory <- c("Artherosclerosis", "Aortic aneurysm", "Other diseases of arteries, arterioles and capillaries", "Other disorder of the circulatory system")
+circulatory_g <- rep("Circulatory disorders", length(circulatory))
+respiratory <- c("Influenza", "Other acute respiratory infections", "Pneumonia", "Chronic bronchitis", "Asthma", "Other obstructive pulmonary diseases", "Other respiratory diseases")
+respiratory_g <- rep("Respiratory diseases", length(respiratory))
+digestive <- c("Gastric and duodenal ulcer", "Gastro-enteritis (non-infectious)", "Chronic liver diseases and cirrhosis", "Other diseases of the digestive system")
+digestive_g <- rep("Digestive system diseases", length(digestive))
+skin <- c("Infections of skin and subcutaneous tissue", "Non-infectious diseases of the skin and subcutaneous tissue")
+skin_g <- rep("Skin diseases", length(skin))
+musculoskeletal <- c("Rheumatoid arthritis and osteoarthrosis", "Other diseases of the musculoskeletal system/connective tissue")
+musculoskeletal_g <- rep("Musculoskeletal diseases", length(musculoskeletal))
+genitourinary <- c("Nephritis, nephrosis and renal failure", "Infections of kidney", "Other diseases of kidney and ureter", "Other diseases of the genitourinary system")
+genitourinary_g <- rep("Genitourinary diseases", length(genitourinary))
+pregnancy <- c("Complications of pregnancy, childbirth and puerperium")
+pregnancy_g <- rep("Pregnancy", length(pregnancy))
+perinatal <- c("Certain conditions originating in the perinatal period")
+perinatal_g <- rep("Perinatal", length(perinatal))
+congenital <- c("Congenital malformations of the nervous system", "Congenital malformations of the circulatory system", "Other congenital malformations/anomalies")
+congenital_g <- rep("Congenital malformations/anomalies", length(congenital))
+unknown <- c("Senility without psychosis", "Sudden death", "Unknown and unspecified causes", "Other ill-defined or unknown")
+unknown_g <- rep("Ill-defined or unknown", length(unknown))
+external <- c("Motor vehicle accidents", "Accidental falls", "Accidental poisoning by alcohol", "Other accidental poisoning", "Other accidents", "Suicide", "Homicide", "Events of undetermined intent", "Other external causes")
+external_g <- rep("External causes", length(external))
+
+# Creating a single vector of all of the diseases, and also "All"
+diseases <- c(infections, neoplasms, blood, endocrine, mental, nervous, heart, cerebrovascular, circulatory, respiratory, digestive, skin, musculoskeletal, genitourinary, pregnancy, perinatal, congenital, unknown, external, "All")
+# Creating a single vector of all the groupings (with the appropriate repetitions), and also "All"
+diseases_g <- c(infections_g, neoplasms_g, blood_g, endocrine_g, mental_g, nervous_g, heart_g, cerebrovascular_g, circulatory_g, respiratory_g, digestive_g, skin_g, musculoskeletal_g, genitourinary_g, pregnancy_g, perinatal_g, congenital_g, unknown_g, external_g, "All")
+# Concatenating the groupings and diseases to come up with a full categorization ("Group" - "Disease")
+diseases_g_full <- paste(diseases_g, diseases, sep=" - ")
+
+# Putting the codes, diseases, groupings, and full categorizations into a table
+codes <- data.frame(
+  COD.cat = levels(us$COD.cat),
+  Disease = diseases,
+  Group = diseases_g,
+  Group.Disease = diseases_g_full
+)
+```
+
+
+<!-- Processing the US aggregate data (adding descriptive names to the diseases, calculating populations, removing unnecessary age groups) -->
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
+# First, use the coding above to put descriptive names into the dataset
+us <- us %>% full_join(codes, by=c("COD.cat"))
+
+# Add populations to the dataset (based on deaths / rates)
+us %>% mutate(
+  Pop.F = Deaths.F / (Rates.F / 100000),
+  Pop.M = Deaths.M / (Rates.M / 100000), 
+  Pop.T = Deaths.T / (Rates.T / 100000)
+  ) -> us
+
+# Remove unnecessary age groupings (ie ones that aren't in neat 5-year bands. This information is already coded in the dataset as a 5-year band for most of the groupings, and also only the 5-year bands have corresponding entries in the States data)
+us <- us %>% filter(Age != "85+", Age != "90+", Age != "95+", Age != "100+", Age != "105+")
+
+# Order the age groupings in consecutive order
+us$Age <- factor(us$Age, c("0", "1-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80-84", "85-89", "90-94", "95-99"))
+
+us_5x5 <- us
+
+# Remove data that is before 1960 or after 2014, as there are no corresponding entries in the States data (the number of entries lost is relatively small)
+us_5x5 <- us_5x5 %>% filter(Year >= 1960, Year <= 2014)
+
+# Add a separate coding for each year corresponding to the 5-year "year" bucket that that year is in. This will be used to convert the dataset from 1-year "year" buckets to 5-year "year" buckets, which will help smooth out statistical noise, and also make the data more comparable to the States data which is presented in 5-year "year" buckets.
+us_5x5 <- us_5x5 %>% mutate(
+  YearBand = ifelse(
+    Year<1965, "1960-1964", ifelse(
+    Year<1970, "1965-1969", ifelse(
+    Year<1975, "1970-1974", ifelse(
+    Year<1980, "1975-1979", ifelse(
+    Year<1985, "1980-1984", ifelse(
+    Year<1990, "1985-1989", ifelse(
+    Year<1995, "1990-1994", ifelse(
+    Year<2000, "1995-1999", ifelse(
+    Year<2005, "2000-2004", ifelse(
+    Year<2010, "2005-2009", ifelse(
+    Year<2015, "2010-2014", NA)))))))))))
+)
+us_5x5$YearBand <- as.factor(us_5x5$YearBand)
+
+
+# Consolidate the data into 5-year "year" bands. Then, calculate aggregate death counts and populations for those year bands by totaling the respective death counts and populations in the corresponding years.
+us_5x5_t <- us_5x5 %>% group_by(YearBand, Age, COD.cat, Disease, Group, Group.Disease) %>% dplyr::summarize(
+  Deaths.F.t = sum(Deaths.F, na.rm=T), 
+  Deaths.M.t = sum(Deaths.M, na.rm=T), 
+  Deaths.T.t = sum(Deaths.T, na.rm=T), 
+  Pop.F.t = sum(Pop.F, na.rm=T), 
+  Pop.M.t = sum(Pop.M, na.rm=T), 
+  Pop.T.t = sum(Pop.T, na.rm=T)
+)
+
+# Calculate qx's. These must be recalculated based on the total death counts and total population for the 5-year age bands. (Cannot simply take an average of qx's since the population for each year may be different)
+us_5x5_t <- us_5x5_t %>% mutate(
+  qx_F = Deaths.F.t / Pop.F.t, 
+  qx_M = Deaths.M.t / Pop.M.t, 
+  qx_T = Deaths.T.t / Pop.T.t
+  )
+
+# Gather qx's into m/f/b (ie currently these are three separate columns, but would be easier to process the data in "tidy" form)
+us_5x5_t_g <- 
+  us_5x5_t %>% 
+  select(YearBand, Age, COD.cat, Disease, Group, Group.Disease, qx_F, qx_M, qx_T) %>% 
+  gather(Sex, qx, -YearBand, -Age, -COD.cat, -Disease, -Group, -Group.Disease)
+
+# Rename "YearBand" to "Year" (ie same naming as in the States data, to be consistent)
+us_5x5_t_g <- us_5x5_t_g %>% dplyr::rename(Year = YearBand)
+
+# Rename qx's to "m"/"f"/"b"
+us_5x5_t_g$Sex[us_5x5_t_g$Sex=="qx_F"] <- "f"
+us_5x5_t_g$Sex[us_5x5_t_g$Sex=="qx_M"] <- "m"
+us_5x5_t_g$Sex[us_5x5_t_g$Sex=="qx_T"] <- "b"
+
+# Make "sex" into factor data
+us_5x5_t_g$Sex <- as.factor(us_5x5_t_g$Sex)
+
+```
+
+
+<!-- Converting the mortality dataset into a mortality improvement dataset -->
+```{r}
+# Converting the mortality into mortality improvement by spreading out the mortality rates over all years, and taking the difference between years (qx_t / qx_t-1 - 1). Dropping the first year group because there are no mortality rates to compare it to (since it is the first).
+us_5x5_t_g_Improv <- us_5x5_t_g %>% spread(Year, qx)
+us_5x5_t_g_Improv[, 8:ncol(us_5x5_t_g_Improv)] <- 
+  us_5x5_t_g_Improv[, 8:ncol(us_5x5_t_g_Improv)] / us_5x5_t_g_Improv[, 7:(ncol(us_5x5_t_g_Improv)-1)] - 1
+us_5x5_t_g_Improv <- us_5x5_t_g_Improv[,-7]
+us_5x5_t_g_Improv <- us_5x5_t_g_Improv %>% gather(Year, Improvement, -COD.cat, -Disease, -Group, -Group.Disease, -Sex, -Age)
+```
 
 
 # Analysis of data quality
@@ -171,7 +391,7 @@ We mapped the DRGs to the Diagnosis Categories using the following [source](http
 
 While plotting the trend over time, we saw that CMS did not include certain DRGs before the year 2013. This can be visualized in the graph below, where each color is a different DRG:
 
-```{r echo=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 #Loading cleaned data
 data <- read_csv('Inpatient_Cost.csv')
 ```
@@ -188,10 +408,7 @@ ggplot(filtered_data, aes(x=Year, y=Average_Cost, color =Diagnostic_category )) 
 ```
 
 
-For the mortality dataset, we had the following findings about missing data
-
-
-<!-- Asaf's Part Goes Here -->
+For the state mortality dataset, there were no NAs or missing values. The US aggregate dataset also had no NAs. However, for many age groups there were 0 deaths, and many causes of death had no records prior to certain years, such as HIV-AIDS prior to the 1980s. Essentially, this means that deaths occurring due to HIV-AIDS prior to the 1980s were either nonexistent or would have been coded as something other than HIV-AIDS (such as “Other infections” or “Other unexplained”). However, it is unlikely that any significant number of deaths are actually “missing” from the dataset, since deaths data are usually unambiguous (dead or not dead) and carefully recorded by government agencies. Therefore, the data can be considered usable and representative.
 
 
 
@@ -276,7 +493,7 @@ ggplot(drg_cost, aes(x = reorder(Diagnostic_category,Average_Cost) ,y = Average_
 
 
 
-Some key takeaways from the above graph 
+Some key takeaways from the above graph:
 
 Heart and Transplant are significantly more expensive than all other DRGs. There are many possibilities as to why this is occuring. One possibility is that the procedure is simply more expensive because it requires more resources (doctors, nurses, hours in hospital, medication, surgery etc.) Another possibility could be that there are fewer cases for these treatments and those treatments are significantly more expensive and have an outsized effect on the category average.  
 
@@ -349,6 +566,143 @@ ggplot(cheapest_providers, aes(x = Average_Cost, y = fct_reorder(`Provider Name`
 There was a huge variation among the hospitals within the state of California. The highest hospitals were charging upwards of 400K while the lowest hospitals were charging less than 100K. Seeing such a high variation motivated us to create the 2nd interactive component. 
 
 This would allow the user to play with the data and identify the most expensive and least expensive hospitals by state for a diagnostic category. 
+
+
+<!-- Asaf's mortality data findings -->
+
+
+The mortality improvement can be presented as a heatmap.
+```{r, fig.width=10}
+# Heatmap of US mortality (all deaths, all states)
+ggplot(us_5x5_t_g_Improv %>% filter(COD.cat=="All", Sex=="b"), aes(Year, Age)) +
+  geom_raster(aes(fill = Improvement)) +
+  scale_fill_gradientn(colours = terrain.colors(10)) +
+  ggtitle("US Mortality Improvement")
+```
+
+The mortality heatmap comprises three effects: Time effect (mortality rates improving at a given time, which can be seen as a vertical bar in the heatmap), Age effect (mortality rates improving for a given age in all years, which can be seen as a horizontal bar), and Cohort effect (mortalty rates improving for a group born at a specific time, continuing throughout its lifetime, which can be seen as an upward-sloping diagonal line in the heatmap). A positive time effect can be seen here in the late 70s and again in the late 90s. These may possibly be due to spillover positive health effects due to a strong economy. A positive age effect can be seen here for ages below 10, which apparently had consistently good mortality improvement over time. Finally, a small cohort effect can be seen for people born around 1990, who had very strong mortality improvement for about two decades.
+
+There are also specific incidents in the heatmap, which can be seen as singular dots. The two negative incidents worth noting are 15-29 year olds in 1965-1969, and 30-39 year olds in 1985-1994. The first negative incident may be explained by activities tied to the "hippie movement" in the 60s, primarily affecting teenagers and young adults at the time. The second negative incident may be explained by the HIV-AIDS epidemic in the late 80s and early 90s, mostly affecting young to middle-aged men, but also other groups as well. New York seems to have experienced a worse mortality impact at this time compared to the rest of the US (particularly deep South states), as can be seen in the interactive mortality plots of NY versus other states, and in the NY vs aggregate US plot below.
+
+
+Calculating the difference between a state's mortality improvement, and the US aggregate mortality improvement, as an example.
+```{r, fig.width=10}
+# Difference between State Improvement and US aggregate improvement
+us_Improv_compare <- us_5x5_t_g_Improv %>% filter(COD.cat=="All", Sex=="b")
+state_Improv_compare <- combinedImprov %>% filter(PopName=="NY", Sex=="b")
+us_Improv_compare <- us_Improv_compare %>% arrange(Age, Year)
+state_Improv_compare <- state_Improv_compare %>% arrange(Age, Year)
+diff_Improv_compare <- cbind(select(state_Improv_compare, Age, Year), state_Improv_compare$Improvement - us_Improv_compare$Improvement)
+names(diff_Improv_compare) <- c("Age", "Year", "Delta")
+diff_Improv_compare <- as.tibble(diff_Improv_compare)
+
+# Plotting the difference in mortality improvement as a heatmap (green indicates that the state had better improvement)
+ggplot(diff_Improv_compare, aes(Year, Age)) +
+ geom_raster(aes(fill = Delta)) +
+ scale_fill_gradientn(colours = terrain.colors(10)) +
+ ggtitle(paste("NY Improvement Minus US Aggregate Improvement", sep=""))
+   
+```
+(Green indicates NY improved more than US avg)
+
+
+Calculating the difference between a state's mortality rates, and the US aggregate mortality rates, just as an example.
+```{r, fig.width=10}
+# Difference between State mortality and US aggregate mortality
+us_Mort_compare <- us_5x5_t_g %>% filter(COD.cat=="All", Sex=="b")
+state_Mort_compare <- combinedQ %>% filter(PopName=="NY", Sex=="b")
+diff_Mort_compare <- state_Mort_compare %>% full_join(us_Mort_compare, by=c("Age", "Year"))
+diff_Mort_compare <- diff_Mort_compare %>% mutate(Ratio=qx.x/qx.y)
+diff_Mort_compare <- as.tibble(diff_Mort_compare)
+
+# Plotting the difference in mortality rates as a heatmap (green indicates that the state had better mortality)
+ggplot(diff_Mort_compare %>% filter(Year != levels(diff_Mort_compare$Year)[1]), aes(Year, Age)) +
+   geom_raster(aes(fill = Ratio)) +
+   scale_fill_gradientn(colours = terrain.colors(10)) +
+   ggtitle(paste("NY Mortality / US Aggregate Mortality", sep=""))
+     
+```
+(Green indicates NY had lower mortality than US avg)
+
+
+Calculating an average US mortality rate by year, regardless of age.
+This will not necessarily show a decreasing trend, as demographics change (particularly an aging population)
+```{r}
+# Calculate aggregate death counts and populations for years
+us_Allx1_t <- us %>% group_by(Year, COD.cat, Disease, Group, Group.Disease) %>% dplyr::summarize(
+  Deaths.F.t = sum(Deaths.F, na.rm=T), 
+  Deaths.M.t = sum(Deaths.M, na.rm=T), 
+  Deaths.T.t = sum(Deaths.T, na.rm=T), 
+  Pop.F.t = sum(Pop.F, na.rm=T), 
+  Pop.M.t = sum(Pop.M, na.rm=T), 
+  Pop.T.t = sum(Pop.T, na.rm=T)
+) %>% as.tibble()
+
+# Calculate qx's
+us_Allx1_t <- us_Allx1_t %>% mutate(
+  q_F = Deaths.F.t / Pop.F.t, 
+  q_M = Deaths.M.t / Pop.M.t, 
+  q_T = Deaths.T.t / Pop.T.t
+  )
+
+# Gather qx's into m/f/b
+us_Allx1_t <- 
+  us_Allx1_t %>% 
+  select(Year, COD.cat, Disease, Group, Group.Disease, q_F, q_M, q_T) %>% 
+  gather(Sex, q, -Year, -COD.cat, -Disease, -Group, -Group.Disease)
+
+# Rename qx's to "m"/"f"/"b"
+us_Allx1_t$Sex[us_Allx1_t$Sex=="q_F"] <- "f"
+us_Allx1_t$Sex[us_Allx1_t$Sex=="q_M"] <- "m"
+us_Allx1_t$Sex[us_Allx1_t$Sex=="q_T"] <- "b"
+us_Allx1_t$Sex <- as.factor(us_Allx1_t$Sex)
+
+# Plot of mortality improvement over time
+ggplot(us_Allx1_t %>% filter(COD.cat=="All"), aes(Year, q, colour=Sex)) +
+  geom_line() +
+  ggtitle("Probability of death (all ages), US, 1959 to 2016, Males and Females") +
+  ylab("Probability of Death in Year")
+
+```
+
+Repeating the same calculations, but this time splitting the mortality rate by age groups. Now, the mortality rate should be decreasing over time, since we are adjusting for age.
+```{r}
+# Calculate death counts and populations for years
+us_5x1_t <- us %>% group_by(Year, Age, COD.cat, Disease, Group, Group.Disease) %>% dplyr::summarize(
+  Deaths.F.t = sum(Deaths.F, na.rm=T), 
+  Deaths.M.t = sum(Deaths.M, na.rm=T), 
+  Deaths.T.t = sum(Deaths.T, na.rm=T), 
+  Pop.F.t = sum(Pop.F, na.rm=T), 
+  Pop.M.t = sum(Pop.M, na.rm=T), 
+  Pop.T.t = sum(Pop.T, na.rm=T)
+) %>% as.tibble()
+
+# Calculate qx's
+us_5x1_t <- us_5x1_t %>% mutate(
+  qx_F = Deaths.F.t / Pop.F.t, 
+  qx_M = Deaths.M.t / Pop.M.t, 
+  qx_T = Deaths.T.t / Pop.T.t
+  )
+
+# Gather qx's into m/f/b
+us_5x1_t <- 
+  us_5x1_t %>% 
+  select(Year, Age, COD.cat, Disease, Group, Group.Disease, qx_F, qx_M, qx_T) %>% 
+  gather(Sex, qx, -Year, -Age, -COD.cat, -Disease, -Group, -Group.Disease)
+
+# Rename qx's to "m"/"f"/"b"
+us_5x1_t$Sex[us_5x1_t$Sex=="qx_F"] <- "f"
+us_5x1_t$Sex[us_5x1_t$Sex=="qx_M"] <- "m"
+us_5x1_t$Sex[us_5x1_t$Sex=="qx_T"] <- "b"
+us_5x1_t$Sex <- as.factor(us_5x1_t$Sex)
+
+# Plot of mortality improvement over time
+ggplot(us_5x1_t %>% filter(COD.cat=="All", Sex=="b", Age %in% c("55-59", "60-64", "65-69", "70-74", "75-79")), aes(Year, qx, colour=Age)) +
+  geom_line() +
+  ggtitle("Probability of death, US, 1959 to 2016, for Older Age Groups") +
+  ylab("Probability of Death in Year") +
+  guides(colour = guide_legend(reverse=TRUE))
+```
 
 
 # Executive summary
