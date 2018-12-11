@@ -14,6 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(mi)
 library(extracat)
+library(choroplethr)
+library(choroplethrMaps)
 ```
 
 ```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo=FALSE}
@@ -37,9 +39,9 @@ rm(data_2011, data_2012, data_2013, data_2014, data_2015, data_2016)
 ```
 
 
-#Introduction
+# Introduction
 
-##Questions/Motivation for choosing the topic
+## Questions/Motivation for choosing the topic
 
 <font size="4">
 According to [Commonwealth Fund](https://www.commonwealthfund.org/publications/issue-briefs/2015/oct/us-health-care-global-perspective) , spendings for the Healthcare Industry in the US as a percentage of the GDP is 32% higher than France. The gap can be illustrated in the following graph. 
@@ -80,10 +82,10 @@ List of team members and a description of how each contributed to the project
 4. Akshat Mittal
 
 
-#Description of data
+# Description of data
 
 
-##Sources of the Data
+## Sources of the Data
 
 
 The medicare dataset was collected from the website of Centers for Medicare and Medicaid Services (CMS). The links to the dataset can be found [here](https://www.cms.gov/Research-Statistics-Data-and-Systems/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/Inpatient.html). There is a file associated with each year. 
@@ -104,7 +106,7 @@ While working on the dataset, it was found that the data was lacking in some key
 
 <!-- Asaf's Part Goes Here -->
 
-##General Description of Data
+## General Description of Data
 
 
 To best describe the data we will differentiate between the datasets and then explain the relationship between them. 
@@ -129,10 +131,10 @@ The Mortality dataset contains the following columns
 <!-- Asaf's Part Goes Here -->
 
 
-#Analysis of data quality
+# Analysis of data quality
 
 
-##Description of Data Quality
+## Description of Data Quality
 
 
 There were some missing values for the cost of providers in the data. This can be visualized using the visna package:
@@ -167,7 +169,7 @@ We mapped the DRGs to the Diagnosis Categories using the following [source](http
 
 While plotting the trend over time, we saw that CMS did not include certain DRGs before the year 2013. This can be visualized in the graph below, where each color is a different DRG:
 
-```{r}
+```{r echo=FALSE}
 #Loading cleaned data
 data <- read_csv('Inpatient_Cost.csv')
 ```
@@ -191,28 +193,51 @@ For the mortality dataset, we had the following findings about missing data
 
 
 
-#Main analysis
+# Main analysis
 
 
-##Findings
+## Findings
 
 
 We first decided to see how the costs varied by State in the US. Cleaning the cost variables by removing the ‘$’ and the ‘,’ in the dataset, we used the choropleth package to plot the same:
 
 
-```{r}
+```{r echo=FALSE}
+data(state.regions)
+drg_grouped_by_year <-  data %>% group_by(`Diagnostic_category`, `Year`,`Provider State`) %>%
+  summarise(Count_Discharge = sum(`Total Discharges`),Sum_Amount = sum(`Total_Payments`))
+
+drg_grouped_by_year  <- drg_grouped_by_year  %>% group_by(`Year`) %>% mutate(Percent_Discharges = 100 * Count_Discharge/sum(Count_Discharge),
+                                                                             Percent_Cost = 100 * Sum_Amount/sum(Sum_Amount))
+
+total_cost_by_state <- drg_grouped_by_year %>% dplyr::group_by(`Provider State`) %>% 
+  dplyr::summarise(Total_Discharges = sum(Count_Discharge),Total_Cost = sum(Sum_Amount))
+
+total_cost_by_state$Average_Cost <- total_cost_by_state$Total_Cost/total_cost_by_state$Total_Discharges
+colnames(total_cost_by_state)[1] <- 'State'
+
+total_cost_by_state$region <- plyr::mapvalues(total_cost_by_state$State, from = state.regions$abb, to = state.regions$region)
+total_cost_by_state$value <- total_cost_by_state$Average_Cost
 
 ```
 
+```{r fig.height=10, fig.width=10}
+state_choropleth(total_cost_by_state,title = "Average Cost by State",
+                 legend = "Average Cost")
+```
 
 
 As expected, we noticed that California and New York have a high average cost of treatment. This can be attributed to the high cost of living in those states. On the other hand, Florida having such a low average cost seems to indicate that the treatments are generally cheaper in that state. 
 
 
+
 We then investigated the total number of discharges by state:
 
-```{r}
 
+```{r fig.height=10, fig.width=10}
+total_cost_by_state$value<- total_cost_by_state$Total_Discharges
+state_choropleth(total_cost_by_state,title = "Total Discharges by State",
+                 legend = "Total Discharges")
 ```
 
 
@@ -229,24 +254,40 @@ When we compared this choropleth graph of Total Discharges by State to the previ
 This comparison led us to want further breakdowns within each DRG for each state which could shed a little light as to why there is an inverse relationship. Based on these two graphs we also wondered whether a further breakdown of the DRG’s amongst the states could indicate whether <!-- Raphael's Part Goes Here -->
 
 
-We decided to look at the most expensive diagnosis categories:
 
-```{r}
+
+```{r echo = FALSE}
+drg_cost <- drg_grouped_by_year %>% group_by(`Diagnostic_category`) %>% 
+  dplyr::summarise(Average_Cost = sum(Sum_Amount)/sum(Count_Discharge))
 
 ```
+
 
 
 We began our exploratory analysis by asking which Diagnoses Related Groups are the most expensive on average? We thought that this graph would give a good idea about which <!-- Raphael's Part Goes Here -->
 
-```{r}
+```{r fig.height=10, fig.width=10}
+
+ggplot(drg_cost, aes(x = reorder(Diagnostic_category,Average_Cost) ,y = Average_Cost)) + 
+         geom_col() + scale_y_continuous(labels = function(l) { paste0(l/1000, "K")}) +
+  coord_flip() + ylab('Average Cost') + xlab('DRG') + ggtitle('Average Cost by DRG')
 
 ```
 
 
+```{r fig.height=10, fig.width=10}
+drg_discharge <- drg_grouped_by_year %>% group_by(`Diagnostic_category`) %>% 
+  dplyr::summarise(Discharge = max(Count_Discharge))
+
+ggplot(drg_discharge, aes(x = reorder(Diagnostic_category,Discharge) ,y = Discharge)) + 
+         geom_col() + scale_y_continuous(labels = function(l) { paste0(l/1000000, "M")}) +
+  coord_flip() + ylab('Count') + xlab('DRG') + ggtitle('Number of Discharges by DRG')
+```
+
 This graph seeks to answer the question of which Diagnoses Related Groups are most commonly treated.  We arrived at this question because the prior graph “Average Cost by DRG” does not discuss to how many people were treated for a DRG. Therefore, it is possible that the DRG’s with the highest average cost could in fact be so expensive because they are rare.  This graph gives insight into whether any of the top ten DRG’s by average cost are also the top ten by Number of discharges.
 
 
-#Executive summary
+# Executive summary
 
 There were three main findings that we derived from our analysis:
 
@@ -265,9 +306,9 @@ Bottom Line: Fly to Florida for Heart Treatment!
   <!-- Asaf's Part Goes Here -->
   
   
-#Interactive component
+# Interactive component
 
-##DRGApp
+## DRGApp
 
 The aim of the interactive app is to make it easy to visualize, in several dimensions (year, number of discharges, type of disease etc), the scenario of healthcare costs in the US. Kindly note that this app is best viewed in Chrome (version 70+) at 100% zoom. It consists of two components:
 
@@ -288,12 +329,12 @@ The aim of the interactive app is to make it easy to visualize, in several dimen
 
 + This app would help make an informed decision in choosing a healthcare provider by the expected expenditure for treatment.
 
-##MortalityHeavyApp
+## MortalityHeavyApp
 
 
-#Conclusion
+# Conclusion
 
-##Limitations 
+## Limitations 
 
 1. The medicare dataset only looks at the Medicare population which is defined for populated aged 65 and above. This does not include the costs for the other age groups. 
  
