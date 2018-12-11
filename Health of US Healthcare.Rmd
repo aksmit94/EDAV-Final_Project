@@ -525,7 +525,55 @@ This graph does shed light on the our question from the previous graph as to whe
 
 The most basic derivation from this graph is that it shows which DRGs medicare treats most. It makes sense for example that Pregnancy and Childbirth are rarely paid for by medicare because in general only people over 65 are eligible for medicare. Note that the 6,983 cases here likely come from the small group of people who received social security disability insurance checks for over 24 months and become eligible for medicare.
 
-From the above 2 graphs we wanted to dig deeper into the variation within the states. We believed that there were some hospitals which were charging more for the same diagnostic category within a partcular state. 
+We now want to see the relationship between the diagnoses related group's percent discharges and percent cost. We thought that the percentage cost should correlate with the percentage discharged. 
+
+
+```{r echo = FALSE}
+drg_grouped_by_year <-  data %>% group_by(Diagnostic_category, Year,State) %>% summarise(Count_Discharge = sum(`Total Discharges`),Sum_Amount = sum(Total_Payments))
+
+drg_grouped_by_year  <-  drg_grouped_by_year %>% group_by(`Year`) %>% mutate(Percent_Discharges = 100 * Count_Discharge/sum(Count_Discharge),
+                                                                             Percent_Cost = 100 * Sum_Amount/sum(Sum_Amount))
+
+drg_grouped_by_totalAvg <- drg_grouped_by_year %>% group_by(Diagnostic_category) %>%  dplyr::summarise(Total_Discharges = sum(Count_Discharge),Total_Cost = sum(Sum_Amount))
+
+
+drg_grouped_by_totalAvg$Average_Cost <- drg_grouped_by_totalAvg$Total_Cost/drg_grouped_by_totalAvg$Total_Discharges
+
+
+drg_grouped_by_totalAvg  <-  drg_grouped_by_totalAvg %>% mutate(Percent_Discharges = 100 * Total_Discharges/sum(Total_Discharges),Percent_Cost = 100 * Total_Cost/sum(Total_Cost))
+
+tidy_form_of_data <- drg_grouped_by_totalAvg %>% gather(key = Category, value = Percentage, -Diagnostic_category) %>% filter(Category %in% c('Percent_Cost', 'Percent_Discharges'))
+```
+
+
+```{r echo = FALSE}
+theme_dotplot <- theme_bw(12) +
+    theme(axis.text.y = element_text(size = rel(.75)),
+          axis.ticks.y = element_blank(),
+          axis.title.x = element_text(size = rel(.75)),
+          panel.grid.major.x = element_blank(),
+          panel.grid.major.y = element_line(size = 0.5),
+          panel.grid.minor.x = element_blank())
+```
+
+
+```{r fig.height=10, fig.width=10}
+ggplot(tidy_form_of_data, aes(x = Percentage,
+                                y = fct_reorder2(Diagnostic_category, fct_reorder(Category,Percentage), -Percentage), color = Category)) +
+   geom_point() + ylab("DRGs") + theme_dotplot + 
+   ggtitle("DRGs by Percent Avg Cost & Percent of Discharges") + scale_color_manual(name="Category", 
+                        labels = c("Percent Cost",
+                                   "Percent Discharges"), 
+                        values = c("Percent_Cost"="Blue", 
+                                   "Percent_Discharges"="red"))
+
+```
+
+If we look at the DRG Musculoskeletal System & Connective Tissue we see that it accounts for approximately 12.59% of discharges while it also accounts for over 17% of cost. This discrepancy could be due to a few different factors. One possibility is that each treatment is expensive compared to other treatments. This high cost could also be due to an array of other factors.
+
+
+From the above 3 graphs we wanted to dig deeper into the variation within the states. We believed that there were some hospitals which were charging more for the same diagnostic category within a particular state
+ 
 
 We first filtered out the hospitals which did not have 50 discharges in the 5 years. We looked at the state of California which had a higher average cost and looked at the Diagnostic Category of Heart. 
 
@@ -727,54 +775,13 @@ There were three main findings that we derived from our analysis:
 
 ```{r echo = FALSE, fig.width=10, fig.height=7, warning=FALSE, message=FALSE}
 
-data$`DRG Definition` <- gsub('(.*?)- ', '',data$`DRG Definition`)
-
-drg_grouped_by_year <-  data %>% group_by(Diagnostic_category, `DRG Definition`, `Year`,`Provider State`) %>%
-  summarise(Count_Discharge = sum(`Total Discharges`),Sum_Amount = sum(`Total_Payments`))
-
-drg_grouped_by_year  <- drg_grouped_by_year  %>% group_by(Year) %>% mutate(Percent_Discharges = 100 * Count_Discharge/sum(Count_Discharge),
-                                                                           Percent_Cost = 100 * Sum_Amount/sum(Sum_Amount))
-
-
-drg_grouped_by_year$Average_Amount <- drg_grouped_by_year$Sum_Amount/drg_grouped_by_year$Count_Discharge
-
-total_cost_by_state <- drg_grouped_by_year %>% dplyr::group_by(`Provider State`) %>% 
-  dplyr::summarise(Total_Discharges = sum(Count_Discharge),
-                   Total_Cost = sum(Sum_Amount))
-
-total_cost_by_state$Average_Cost <- total_cost_by_state$Total_Cost/total_cost_by_state$Total_Discharges
-
-colnames(total_cost_by_state)[1] <- 'state'
-
-total_cost_by_state$hover <- with(total_cost_by_state, paste(state, '<br>', "Total Discharges: ", Total_Discharges))
-
-# give state boundaries a white border
-l <- list(color = toRGB("white"), width = 2)
-
-# specify some map projection/options
-g <- list(
-  scope = 'usa',
-  projection = list(type = 'albers usa'),
-  showlakes = TRUE,
-  lakecolor = toRGB('white')
-)
-
-#Create Choropleth
-p <- plot_geo(total_cost_by_state, locationmode = 'USA-states') %>%
-  add_trace(
-    z = ~Average_Cost, text = ~hover, locations = ~state,
-    color = ~Average_Cost, colors = 'Purples'
-  ) %>%
-  colorbar(title = "Average USD") %>%
-  layout(
-    geo = g
-  ) %>% layout(autosize = F, width = 900, height = 800)
-
-plotly_build(p)
+state_choropleth(total_cost_by_state,title = "Average Cost by State",
+                 legend = "Average Cost")
 ```
 
 
 
+2. California and New York have a high average cost and high number of discharges. They contribute to the majority of the cost. Reducing their costs by 5% will reduce the overall spend by 
 
 
 
@@ -795,7 +802,6 @@ filtered_data %>% inner_join(costly_states) %>% ggplot(aes(x = reorder(`Provider
 ```
 
 
-2. California and New York have a high average cost and high number of discharges. They contribute to the majority of the cost. Reducing their costs by 5% will reduce the overall spend by 
 
 
 3. Going to treatment for Heart in Florida is more economical. [Flight tickets from anywhere](https://www.transtats.bts.gov/AIRFARES/) in the US to Miami Florida cost on average \$317.71 and you would be saving on average an amount of about \$20,000 (Average Cost of Heart Treatment Across US - Average Cost of Heart Treatment for Florida - Cost of Flight to Miami).
@@ -863,7 +869,7 @@ ggplot(us_Allx5_t_groups_b, aes(x=Year, y=Ratio, fill=reorder(Group.x, Ratio, la
   geom_bar(position="fill", stat="identity") +
   ggtitle("Disease Group as Proportion of Total Mortality") +
   ylab("Proportion") +
-  scale_fill_manual(values = col_vector)
+  scale_fill_manual(values = col_vector) +
   guides(fill=guide_legend(title="Disease Group"))
 ```
 

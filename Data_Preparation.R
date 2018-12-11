@@ -1,14 +1,18 @@
 library(tidyverse)
 library(Hmisc)
+library(choroplethr)
+library(choroplethrMaps)
 
+
+data(state.regions)
 ### This script will consolidate the 6 Medicare files and create 1 csv which has all the data. 
 
-data_2011 <- read_csv('Medicare_Provider_Charge_Inpatient_DRG100_FY2011.csv')
-data_2012 <- read_csv('Medicare_Provider_Charge_Inpatient_DRG100_FY2012.csv')
-data_2013 <- read_csv('Medicare_Provider_Charge_Inpatient_DRG100_FY2013.csv')
-data_2014 <- read_csv("Medicare_Provider_Charge_Inpatient_DRGALL_FY2014.csv")
-data_2015 <- read_csv("Medicare_Provider_Charge_Inpatient_DRGALL_FY2015.csv")
-data_2016 <- read_csv("Medicare_Provider_Charge_Inpatient_DRGALL_FY2016.csv")
+data_2011 <- read_csv('Data/Medicare_Provider_Charge_Inpatient_DRG100_FY2011.csv')
+data_2012 <- read_csv('Data/Medicare_Provider_Charge_Inpatient_DRG100_FY2012.csv')
+data_2013 <- read_csv('Data/Medicare_Provider_Charge_Inpatient_DRG100_FY2013.csv')
+data_2014 <- read_csv("Data/Medicare_Provider_Charge_Inpatient_DRGALL_FY2014.csv")
+data_2015 <- read_csv("Data/Medicare_Provider_Charge_Inpatient_DRGALL_FY2015.csv")
+data_2016 <- read_csv("Data/Medicare_Provider_Charge_Inpatient_DRGALL_FY2016.csv")
 
 data_2011$Year <- 2011
 data_2012$Year <- 2012
@@ -47,5 +51,5 @@ data_na_removed$Diagnostic_category <- plyr::mapvalues(data_na_removed$`DRG Defi
 data_na_removed$State <- capitalize(plyr::mapvalues(data_na_removed$`Provider State`, from = state.regions$abb, to = state.regions$region))
 
 ### Writing the data 
-write.csv(data_na_removed, "Inpatient_Cost.csv")
+write.csv(data_na_removed, "Data/Inpatient_Cost.csv")
 
