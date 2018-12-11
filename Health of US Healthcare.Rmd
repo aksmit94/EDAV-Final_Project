@@ -77,12 +77,23 @@ We were also interested in the mortality rate over time. This would allow us to 
 
 Another motivation for using the mortality data set is that we wanted to understand whether the medicare spending makes sense according to the Disease Categories. For example, is there a correlation between the amount spent on a disease category( or paid out on average) with the disease category having the highest death rate? 
 
-List of team members and a description of how each contributed to the project
+List of team members and a description of how each contributed to the project:
+
+
 1. Asaf Gal
-   +Heatmap of Mortality Rates
++ Worked on the shiny interactive heatmaps for the mortality datasets. 
++ Created the analysis and the executive summary for the mortality data
+
 2. Ashwin Jayaraman
++Worked on the analysis for the Medicare Dataset. Explored and created the visualizations for the same
+
 3. Raphael Kintzer
++ Worked on the analysis for the Medicare Dataset. Explored and created the visualizations for the same
 4. Akshat Mittal
++ Created the shiny interactive app for the Mortality and the Medicare Datasets.
+
+
+Each member contributed to the final documentation by explaining their parts.  
 
 
 # Description of data
@@ -394,6 +405,7 @@ While plotting the trend over time, we saw that CMS did not include certain DRGs
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 #Loading cleaned data
 data <- read_csv('Inpatient_Cost.csv')
+data <- data[,-1]
 ```
 
 
@@ -472,7 +484,7 @@ This comparison led us to explore further breakdowns within each DRG for each st
 
 Our next question was on which Diagnoses Related Groups are the most expensive on average?
 
-To accomplish the above task, we bucketed the DRGs by their general categories based on codes provided by CMS. The graph can be seen below
+To accomplish the above task, we bucketed the DRGs by their general categories based on codes provided by CMS. The graph can be seen below:
 
 
 
@@ -525,7 +537,7 @@ state_data <- data %>% filter(State == filter_state) %>% filter(Diagnostic_categ
 min_num_of_discharges <- 50
 
 provider_information <- state_data %>% group_by(`Provider Name`) %>% filter(sum(`Total Discharges`) > min_num_of_discharges) %>%
-  summarise(Average_Cost = sum(Total_Payments)/sum(`Total Discharges`), Discharges = sum(`Total Discharges`))
+  dplyr::summarize(Average_Cost = sum(Total_Payments)/sum(`Total Discharges`), Discharges = sum(`Total Discharges`))
 
 number <- 10
 
@@ -709,7 +721,11 @@ ggplot(us_5x1_t %>% filter(COD.cat=="All", Sex=="b", Age %in% c("55-59", "60-64"
 
 There were three main findings that we derived from our analysis:
 
-```{r echo = FALSE, fig.width=10, warning=FALSE, messages=FALSE}
+
+1. When looking at the state map, we see that Alaska has a higher average cost compared to other states having a similar population. It’s median cost for most of the Diagnostic Categories are at the top. 
+
+
+```{r echo = FALSE, fig.width=10, fig.height=7, warning=FALSE, message=FALSE}
 
 data$`DRG Definition` <- gsub('(.*?)- ', '',data$`DRG Definition`)
 
@@ -757,11 +773,13 @@ p <- plot_geo(total_cost_by_state, locationmode = 'USA-states') %>%
 plotly_build(p)
 ```
 
-1. When looking at the state map, we see that Alaska has a higher average cost compared to other states having a similar population. It’s median cost for most of the Diagnostic Categories are at the top. 
 
-2. California and New York have a high average cost and high number of discharges. They contribute to the majority of the cost. Reducing their costs by 5% will reduce the overall spend by 
 
-```{r echo = FALSE, fig.width=10, warning=FALSE, messages=FALSE}
+
+
+
+
+```{r echo = FALSE, fig.width=10, warning=FALSE, message=FALSE}
 
 
 filtered_data <- data %>% filter(sum(`Total Discharges`) > 50) %>% group_by(`Provider State`, `Provider Name`) %>% 
@@ -773,21 +791,94 @@ costly_states<-head(median_for_state[order(-median_for_state$median_val),], 5)
 
 filtered_data %>% inner_join(costly_states) %>% ggplot(aes(x = reorder(`Provider State`, Average_Cost, median),y = Average_Cost)) + geom_boxplot() + coord_flip() + 
   theme_grey(20) + xlab("State") + ylab("Average Cost in USD") + ggtitle("") + scale_y_continuous(label=dollar_format())
-````
 
-3. Going to treatment for Heart in Florida is more economical. Flight tickets from anywhere in the US to Miami Florida cost on average \$317.71 and you would be saving on average an amount of about \$20,000 (Average Cost of Heart Treatment Across US - Average Cost of Heart Treatment for Florida - Cost of Flight to Miami).
+```
+
+
+2. California and New York have a high average cost and high number of discharges. They contribute to the majority of the cost. Reducing their costs by 5% will reduce the overall spend by 
+
+
+3. Going to treatment for Heart in Florida is more economical. [Flight tickets from anywhere](https://www.transtats.bts.gov/AIRFARES/) in the US to Miami Florida cost on average \$317.71 and you would be saving on average an amount of about \$20,000 (Average Cost of Heart Treatment Across US - Average Cost of Heart Treatment for Florida - Cost of Flight to Miami).
 
 
 Bottom Line: Fly to Florida for Heart Treatment!
 
 
 4. Mortality Dataset Findings
-  <!-- Asaf's Part Goes Here -->
+
+What are the key drivers of mortality, and how have they changed over time?
+
+
+Repeating the same calculations as above, but this time calculating mortality rates for each cause of death group. The mortality rates for each cause of death will then be used to identify which causes of death are most prominent.
+
+
+Also, will be ignoring demographics again, since too many dimensions will make it hard to visualize.
+
+
+```{r fig.width=13, echo=FALSE, warning=FALSE, message=FALSE}
+# Calculate aggregate death counts and populations for year bands
+us_Allx5_t_groups <- us_5x5 %>% group_by(YearBand, Group) %>% dplyr::summarize(
+  Deaths.F.t = sum(Deaths.F, na.rm=T), 
+  Deaths.M.t = sum(Deaths.M, na.rm=T), 
+  Deaths.T.t = sum(Deaths.T, na.rm=T), 
+  Pop.F.t = sum(Pop.F, na.rm=T), 
+  Pop.M.t = sum(Pop.M, na.rm=T), 
+  Pop.T.t = sum(Pop.T, na.rm=T)
+)
+
+# Calculate qx's
+us_Allx5_t_groups <- us_Allx5_t_groups %>% mutate(
+  qx_F = Deaths.F.t / Pop.F.t, 
+  qx_M = Deaths.M.t / Pop.M.t, 
+  qx_T = Deaths.T.t / Pop.T.t
+  )
+
+# Gather qx's into m/f/b
+us_Allx5_t_groups <- 
+  us_Allx5_t_groups %>% 
+  select(YearBand, Group, qx_F, qx_M, qx_T) %>% 
+  gather(Sex, qx, -YearBand, -Group)
+
+# Rename "YearBand to Year"
+us_Allx5_t_groups <- us_Allx5_t_groups %>% dplyr::rename(Year = YearBand)
+
+# Rename qx's to "m"/"f"/"b"
+us_Allx5_t_groups$Sex[us_Allx5_t_groups$Sex=="qx_F"] <- "f"
+us_Allx5_t_groups$Sex[us_Allx5_t_groups$Sex=="qx_M"] <- "m"
+us_Allx5_t_groups$Sex[us_Allx5_t_groups$Sex=="qx_T"] <- "b"
+us_Allx5_t_groups$Sex <- as.factor(us_Allx5_t_groups$Sex)
+
+# Filter all of the groups' mortality rates to exclude the "All" category
+us_Allx5_t_groups_b <- us_Allx5_t_groups %>% filter(Sex=="b", Group!="All") %>% select(Year, Group, qx)
+# Filter all of the groups' mortality rates down to *only* the "All" category
+us_Allx5_t_groups_b_total <- us_Allx5_t_groups %>% filter(Sex=="b", Group=="All") %>% select(Year, Group, qx)
+# Calculate a ratio for each cause of death (that mortality rate divided by the "All" mortality rate). This will show the relative contribution of that cause of death to the aggregate mortality rate (in the form of a percentage, which should all add up to 100%).
+us_Allx5_t_groups_b <- us_Allx5_t_groups_b %>% full_join(us_Allx5_t_groups_b_total, by=c("Year")) %>% mutate(Ratio=qx.x/qx.y) %>% select(Year, Group.x, Ratio)
+
+# Generate new color palette appropriate for qualitative data (relatively large number of distinct colors)
+col_vector<-c('#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000', '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080', '#ffffff', '#000000')
+
+# Use a stacked bar chart to show the relative percentages of each cause of death over time
+ggplot(us_Allx5_t_groups_b, aes(x=Year, y=Ratio, fill=reorder(Group.x, Ratio, last))) +
+  geom_bar(position="fill", stat="identity") +
+  ggtitle("Disease Group as Proportion of Total Mortality") +
+  ylab("Proportion") +
+  scale_fill_manual(values = col_vector)
+  guides(fill=guide_legend(title="Disease Group"))
+```
+
+Perinatal death decreased precipitously between 1960 and 2014.
+It is also apparent that heart disease and cerebrovascular disease started decreasing in importance beginning in the early 1990s. The 25-year trend beginning around 1990 exactly reverses the increasing mortality from those two causes of death in the prior 25-year period.
+The importance of external causes as a cause of death did not change at all throughout the years.
+Some diseases became slightly more important throughout the years, such as Respiratory, Endocrine, and Digestive diseases, as well as Malignant Neoplasms.
+Mental and behavioral disorders, and diseases of the nervous system and sense organs, became more important.
   
   
 # Interactive component
 
 ## DRGApp
+
+[LINK](aksmit94.shinyapps.io/DRGApp/)
 
 The aim of the interactive app is to make it easy to visualize, in several dimensions (year, number of discharges, type of disease etc), the scenario of healthcare costs in the US. Kindly note that this app is best viewed in Chrome (version 70+) at 100% zoom. It consists of two components:
 
@@ -808,7 +899,34 @@ The aim of the interactive app is to make it easy to visualize, in several dimen
 
 + This app would help make an informed decision in choosing a healthcare provider by the expected expenditure for treatment.
 
+
+## MortalityLightApp
+
+[LINK](aksmit94.shinyapps.io/MortalityLightApp/)
+
+Given a state (any of the 50 US states plus DC) and sex (either “male” or “female”, or both sexes combined), This app shows three heatmaps. Each heatmap is dimensioned on year and age, and shows one of the following:
+1. The first heatmap shows the chosen state’s and sex’s individual mortality improvement. Green indicates that the mortality for that age group has decreased (improved) from the prior year, reflected as a percentage of prior period’s mortality.
+2. The second heatmap shows the mortality improvement for the state/sex compared to the US total average for that sex. Green indicates that the state/sex’s mortality improvement for that age group and year is lower (better) than the corresponding group under the US total average, reflected as a delta (difference) versus the US average.
+3. The third heatmap shows the state/sex’s mortality rates over the corresponding US average for that group. Green indicates that the mortality rate for that state/sex is lower (better) than the corresponding US average for that group, reflected as a ratio (1 meaning the mortality rate is the same as the US average, and <1 meaning the state’s mortality is lower).
+
+This series of plots shows how a state is performing in terms of mortality. It shows how it is improving compared to itself, how it is improving compared to other states, and where it currently stands in terms of its mortality vs other states. It also shows particular trends in the data, particularly time effects, age effects, and cohort effects. It also shows noteworthy mortality incidents in the state. Splitting by sex allows further detail into what is driving those effects, for example if a particular mortality deterioration is mostly driven by worse mortality for men.
+
+New York generally seems to be a good indication of what is happening to national trends. In general, the mortality patterns in New York are the same as the national averages, but are more exaggerated. (An exception to this is the negative mortality incident in the 60s, which seems to be no worse in New York than it was in the national average). However, the positive time effects in the late 70s and late 90s are present, as is the cohort effect for people born in the 80s.
+
+It is interesting to compare coastal states to southern and midwestern states. In particular, the states in the deep South such as Mississippi and Alabama did not experience the mortality improvement that other states did starting in the 80s for people being born in that decade. Therefore, while the national average has shown substantial mortality improvement for young people born in the last few decades compared to prior generations, the southern states generally had unchanged mortality for those same people, causing their mortality to be on the average significantly worse than their non-Southern peers.
+
+
 ## MortalityHeavyApp
+
+[LINK](aksmit94.shinyapps.io/MortalityHeavyApp/)
+
+
+This app is identical to the Light App, but includes an additional graphic showing the mortality trend over time for a particular set of age groups, and cause of death. This helps show the underlying driver of mortality improvement or deterioration in the above heatmaps. For example, it is easy to see that the spike in HIV-AIDS deaths among middle-aged men occurred at the same time and to the same sex and age group as the heatmaps show a negative mortality event. This can be seen by setting the State to “NY”, Sex to “m”, Age Groups to “35-39”, and Cause of Death to “Certain Infectious Diseases - HIV-AIDS”.
+
+The additional user inputs in the Heavy App are the desired Age Groups and the Cause of Death (which feed only into the fourth visualization; the Cause of Death is not an input into the state-level heatmaps because Cause of Death data was not provided with the state datasets). The Cause of Death is aggregated to a disease grouping, rather than exact cause of death even though this is how the data was provided, because this allows more data points to be weighed together, relieving some of the statistical noise and avoiding issues where there is insufficient data. This also makes the app easier to use, as there are only 20 disease groupings but 92 specific causes of death. We believe the decision to aggregate up to disease grouping is theoretically justified because we assume there is some correlation across specific causes of death within each disease grouping.
+
+The output is simply a line chart showing mortality rate over time for the desired age groups, sex, and cause of death grouping.
+
 
 
 # Conclusion
@@ -829,3 +947,6 @@ We no not have the Laboratory Costs and the Pharmaceutical Costs.
 </font>
 	
 
+# Appendix
+
+[GITHUB](https://github.com/aksmit94/EDAV-Final_Project)
