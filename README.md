@@ -43,24 +43,26 @@ disease category having the highest death rate?
 List of team members and a description of how each contributed to the
 project:
 
-1.  Asaf Gal
+Akshat Mittal
+
+-   Created the shiny interactive app for the Mortality and the Medicare
+    Datasets.
+
+Asaf Gal
 
 -   Worked on the shiny interactive heatmaps for the mortality datasets.
 -   Created the analysis and the executive summary for the mortality
     data
 
-1.  Ashwin Jayaraman +Worked on the analysis for the Medicare Dataset.
-    Explored and created the visualizations for the same
+Ashwin Jayaraman 
+-   Worked on the analysis for the Medicare Dataset.
+-   Explored and created the visualizations for the same
 
-2.  Raphael Kintzer
+Raphael Kintzer
 
 -   Worked on the analysis for the Medicare Dataset. Explored and
     created the visualizations for the same
 
-1.  Akshat Mittal
-
--   Created the shiny interactive app for the Mortality and the Medicare
-    Datasets.
 
 Each member contributed to the final documentation by explaining their
 parts.
