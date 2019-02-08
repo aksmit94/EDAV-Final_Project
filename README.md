@@ -47,6 +47,7 @@ Akshat Mittal
 
 -   Created the shiny interactive app for the Mortality and the Medicare
     Datasets.
+-   Worked on the analysis for the Medicare Dataset.
 
 Asaf Gal
 
